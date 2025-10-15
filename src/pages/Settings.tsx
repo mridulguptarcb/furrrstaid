@@ -53,7 +53,7 @@ const Settings = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Full Name</p>
-                    <p className="text-sm text-muted-foreground">John Doe</p>
+                    <p className="text-sm text-muted-foreground">DEEPAK BHATI</p>
                   </div>
                   <Button variant="outline" size="sm">Edit</Button>
                 </div>
@@ -61,7 +61,7 @@ const Settings = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Email Address</p>
-                    <p className="text-sm text-muted-foreground">john@example.com</p>
+                    <p className="text-sm text-muted-foreground">deepak052005@example.com</p>
                   </div>
                   <Button variant="outline" size="sm">Edit</Button>
                 </div>
@@ -69,7 +69,7 @@ const Settings = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Phone Number</p>
-                    <p className="text-sm text-muted-foreground">+1 (555) 123-4567</p>
+                    <p className="text-sm text-muted-foreground">+91 9540359475</p>
                   </div>
                   <Button variant="outline" size="sm">Edit</Button>
                 </div>

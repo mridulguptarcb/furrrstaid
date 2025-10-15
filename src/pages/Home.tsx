@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router-dom"; 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Heart, Clock, MapPin, Shield, Activity, Phone } from "lucide-react";
@@ -8,6 +8,12 @@ import featureVet from "@/assets/feature-vet.jpg";
 import featureCare from "@/assets/feature-care.jpg";
 
 const Home = () => {
+  // === LOGIN CHECK ===
+  const token = localStorage.getItem("token");
+  if (!token) {
+    window.location.href = "/auth"; // force login page
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -45,7 +51,7 @@ const Home = () => {
               <div className="flex items-center gap-6 pt-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Shield className="h-5 w-5 text-primary" />
-                  <span>Trusted by 50k+ pet parents</span>
+                  <span>Trusted by 5+ pet parents</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Heart className="h-5 w-5 text-secondary" fill="currentColor" />
@@ -68,7 +74,7 @@ const Home = () => {
                     <Activity className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <p className="font-semibold">500+ Lives Saved</p>
+                    <p className="font-semibold">2+ Lives Saved</p>
                     <p className="text-sm text-muted-foreground">This month</p>
                   </div>
                 </div>
@@ -110,7 +116,7 @@ const Home = () => {
             ].map((item, index) => (
               <Card key={index} className="relative overflow-hidden group hover:shadow-lg transition-all duration-300">
                 <CardContent className="p-6 space-y-4">
-                  <div className="absolute top-0 right-0 text-8xl font-bold text-primary/5 -mr-4 -mt-4">
+                  <div className="absolute top-0 right-0 text-8xl font-bold text-gray-500 -mr-4 -mt-4">
                     {item.step}
                   </div>
                   <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -206,7 +212,7 @@ const Home = () => {
       {/* CTA Section */}
       <section className="py-20 px-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-secondary -z-10" />
-        <div className="container mx-auto text-center text-white">
+        <div className="container mx-auto text-center text-black">
           <h2 className="text-4xl font-bold mb-4">Ready to Protect Your Best Friend?</h2>
           <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
             Join thousands of pet parents who trust FurrstAid for peace of mind

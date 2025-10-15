@@ -27,22 +27,6 @@ const Header = () => {
             Dashboard
           </Link>
         </nav>
-
-        <div className="flex items-center gap-3">
-          <Link to="/auth">
-            <Button variant="outline" className="hidden sm:inline-flex">
-              Sign In
-            </Button>
-          </Link>
-          <Link to="/auth">
-            <Button variant="hero">
-              Get Started
-            </Button>
-          </Link>
-          <Button variant="ghost" size="icon" className="md:hidden">
-            <Menu className="h-5 w-5" />
-          </Button>
-        </div>
       </div>
     </header>
   );

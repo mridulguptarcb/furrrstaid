@@ -3,7 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+from datetime import datetime, timedelta
 from typing import List, Optional
 from datetime import datetime, date
 import uvicorn
@@ -264,6 +267,39 @@ class VaccinationResponse(VaccinationBase):
     class Config:
         from_attributes = True
 
+SECRET_KEY = "b6f8e9c8f25a4f7b2ad90e1a6a55a5b6f1a6c88b2a4478b6e5a77c9b3a9f0f2a"  # replace with env variable in production
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+
+Base.metadata.create_all(bind=engine)
+
+# -----------------------------------
+# SCHEMAS
+# -----------------------------------
+class UserCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+
 # FastAPI app
 app = FastAPI(title="FurrstAid API", version="1.0.0")
 
@@ -283,6 +319,44 @@ def get_db():
         yield db
     finally:
         db.close()
+from passlib.context import CryptContext
+
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+from fastapi import Security
+from fastapi.security import OAuth2PasswordBearer
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")  # tokenUrl points to your login endpoint
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        raise credentials_exception
+    return user
 
 # Initialize default data
 def init_default_data():
@@ -602,8 +676,31 @@ async def delete_vaccination(vaccination_id: int, db: Session = Depends(get_db))
     db.delete(vaccination)
     db.commit()
     return {"message": "Vaccination deleted successfully"}
+@app.post("/signup")
+def signup(user: UserCreate, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.email == user.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
 
-# Get upcoming alerts for dashboard
+    hashed_pw = get_password_hash(user.password)
+    new_user = User(name=user.name, email=user.email, hashed_password=hashed_pw)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return {"message": "User created successfully"}
+
+
+@app.post("/login")
+def login(request: UserLogin, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == request.email).first()
+    if not user or not verify_password(request.password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Invalid email or password")
+    
+    access_token = create_access_token({"sub": user.email})
+    return {"message": "Login successful", "user_id": user.id, "access_token": access_token}
+
+
 @app.get("/api/upcoming-alerts")
 async def get_upcoming_alerts(days: int = 7, db: Session = Depends(get_db)):
     from datetime import timedelta
