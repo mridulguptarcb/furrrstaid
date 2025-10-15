@@ -188,34 +188,39 @@ const PetProfile = () => {
 
   const healthStatus = getHealthStatus(pet);
 
-  // Mock data for timeline, vaccinations, and documents
-  // In a real app, these would come from the API
-  const timeline = [
-    {
-      id: 1,
-      date: "2024-12-15",
-      type: "checkup",
-      title: "Annual Health Checkup",
-      description: "Complete physical examination. All vitals normal.",
-      doctor: pet.vet_name || "Dr. Sarah Johnson"
-    },
-    {
-      id: 2,
-      date: "2024-09-20",
-      type: "vaccine",
-      title: "Rabies Vaccination",
-      description: "Annual rabies vaccine administered. Next due: September 2025",
-      doctor: pet.vet_name || "Dr. Michael Chen"
-    },
-    {
-      id: 3,
-      date: "2024-06-10",
-      type: "incident",
-      title: "Minor Cut on Paw",
-      description: "Small cut treated and bandaged. Healed completely in 5 days.",
-      doctor: pet.vet_name || "Dr. Sarah Johnson"
-    }
-  ];
+  // Build timeline from completed checkup reminders and administered vaccinations
+  const completedReminders = reminders.filter(r => r.is_completed);
+  const administeredVaccinations = vaccinations.filter(v => !!v.date_administered);
+
+  type TimelineItem = {
+    id: string;
+    dateISO: string;
+    title: string;
+    type: "checkup" | "vaccination";
+    description?: string;
+    provider?: string;
+    time?: string;
+  };
+
+  const timelineItems: TimelineItem[] = [
+    ...completedReminders.map(r => ({
+      id: `checkup-${r.id}`,
+      dateISO: r.due_date,
+      title: r.title,
+      type: "checkup" as const,
+      description: r.description,
+      provider: r.vet_name || pet?.vet_name,
+      time: r.due_time,
+    })),
+    ...administeredVaccinations.map(v => ({
+      id: `vaccination-${v.id}`,
+      dateISO: v.date_administered as string,
+      title: v.vaccine_name,
+      type: "vaccination" as const,
+      description: v.notes,
+      provider: v.veterinarian || pet?.vet_name,
+    })),
+  ].sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
 
   const getVaccinationStatus = (nextDueDate: string) => {
     const dueDate = new Date(nextDueDate);
@@ -522,40 +527,44 @@ const PetProfile = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Health Timeline</CardTitle>
-                  <CardDescription>Complete medical history and events</CardDescription>
+                  <CardDescription>Shows completed checkups and administered vaccinations</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
-                    {timeline.map((event) => (
-                      <div key={event.id} className="flex gap-4">
+                    {timelineItems.map((item) => (
+                      <div key={item.id} className="flex gap-4">
                         <div className="flex flex-col items-center">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            event.type === "checkup" ? "bg-primary/10" :
-                            event.type === "vaccine" ? "bg-secondary/10" :
-                            "bg-destructive/10"
-                          }`}>
-                            {event.type === "checkup" ? (
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${item.type === "checkup" ? "bg-primary/10" : "bg-secondary/10"}`}>
+                            {item.type === "checkup" ? (
                               <Activity className="h-5 w-5 text-primary" />
-                            ) : event.type === "vaccine" ? (
-                              <Syringe className="h-5 w-5 text-secondary" />
                             ) : (
-                              <AlertCircle className="h-5 w-5 text-destructive" />
+                              <Syringe className="h-5 w-5 text-secondary" />
                             )}
                           </div>
                           <div className="w-0.5 h-full bg-border min-h-[60px]" />
                         </div>
                         <div className="flex-1 pb-8">
                           <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-semibold">{event.title}</h3>
+                            <h3 className="font-semibold">{item.title}</h3>
                             <span className="text-sm text-muted-foreground">
-                              {new Date(event.date).toLocaleDateString()}
+                              {new Date(item.dateISO).toLocaleDateString()} {item.time ? `at ${item.time}` : ""}
                             </span>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-2">{event.description}</p>
-                          <p className="text-xs text-muted-foreground">Provider: {event.doctor}</p>
+                          {item.description && (
+                            <p className="text-sm text-muted-foreground mb-2">{item.description}</p>
+                          )}
+                          {item.provider && (
+                            <p className="text-xs text-muted-foreground">Provider: {item.provider}</p>
+                          )}
                         </div>
                       </div>
                     ))}
+                    {timelineItems.length === 0 && (
+                      <div className="text-center py-8">
+                        <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">No completed reminders yet</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

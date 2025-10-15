@@ -240,6 +240,7 @@ class VaccinationUpdate(BaseModel):
     veterinarian: Optional[str] = None
     batch_number: Optional[str] = None
     notes: Optional[str] = None
+    is_scheduled: Optional[bool] = None
     scheduled_date: Optional[datetime] = None
     scheduled_time: Optional[str] = None
     location: Optional[str] = None

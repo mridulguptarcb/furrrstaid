@@ -23,13 +23,14 @@ import {
   XCircle
 } from "lucide-react";
 import Header from "@/components/Header";
-import { petAPI, Pet, alertsAPI, UpcomingAlert } from "@/services/api";
+import { petAPI, Pet, alertsAPI, UpcomingAlert, checkupReminderAPI, vaccinationAPI } from "@/services/api";
 
 const Dashboard = () => {
   const [pets, setPets] = useState<Pet[]>([]);
   const [upcomingAlerts, setUpcomingAlerts] = useState<UpcomingAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [markingIds, setMarkingIds] = useState<Set<string>>(new Set());
 
   // Load pets and alerts from backend
   useEffect(() => {
@@ -64,6 +65,34 @@ const Dashboard = () => {
       case "weight": return <Activity className="h-5 w-5" />;
       case "dental": return <Activity className="h-5 w-5" />;
       default: return <Bell className="h-5 w-5" />;
+    }
+  };
+
+  const handleMarkDone = async (alert: UpcomingAlert) => {
+    try {
+      setMarkingIds(prev => new Set(prev).add(alert.id));
+      if (alert.type === "checkup") {
+        const reminderId = parseInt(alert.id.replace("checkup_", ""));
+        await checkupReminderAPI.updateCheckupReminder(reminderId, { is_completed: true });
+      } else if (alert.type === "vaccination") {
+        const vaccinationId = parseInt(alert.id.replace("vaccination_", ""));
+        // Mark scheduled vaccination as administered now
+        await vaccinationAPI.updateVaccination(vaccinationId, {
+          is_scheduled: false,
+          // record administration time as now
+          // backend expects datetime string
+          date_administered: new Date().toISOString(),
+        } as any);
+      }
+      setUpcomingAlerts(prev => prev.filter(a => a.id !== alert.id));
+    } catch (err) {
+      console.error("Failed to mark reminder done", err);
+    } finally {
+      setMarkingIds(prev => {
+        const next = new Set(prev);
+        next.delete(alert.id);
+        return next;
+      });
     }
   };
 
@@ -407,10 +436,18 @@ const Dashboard = () => {
                                 </Link>
                               </Button>
                             )}
-                            <Button variant="outline" size="sm" className="text-green-600 hover:text-green-700">
-                              <CheckCircle className="mr-2 h-4 w-4" />
-                              Mark Done
-                            </Button>
+                            {(alert.type === "checkup" || alert.type === "vaccination") && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-green-600 hover:text-green-700"
+                                onClick={() => handleMarkDone(alert)}
+                                disabled={markingIds.has(alert.id)}
+                              >
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                {markingIds.has(alert.id) ? "Marking..." : "Mark Done"}
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
