@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -16,33 +18,44 @@ import Vets from "./pages/Vets";
 import Settings from "./pages/Settings";
 import PetProfile from "./pages/PetProfile";
 import NotFound from "./pages/NotFound";
+import WalkService from "./pages/WalkService";
+import PetCrutch from "./pages/PetCrutch";
+import Community from "./pages/Community";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/add-pet" element={<AddPet />} />
-          <Route path="/edit-pet/:id" element={<EditPet />} />
-          <Route path="/pet/:id/checkup-reminder" element={<CheckupReminder />} />
-          <Route path="/pet/:id/vaccinations" element={<Vaccinations />} />
-          <Route path="/pet/:id/weight" element={<LogWeight />} />
-          <Route path="/emergency" element={<Emergency />} />
-          <Route path="/vets" element={<Vets />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/pet/:id" element={<PetProfile />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/auth" element={<Auth />} />
+            
+            {/* Protected Routes */}
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/add-pet" element={<ProtectedRoute><AddPet /></ProtectedRoute>} />
+            <Route path="/edit-pet/:id" element={<ProtectedRoute><EditPet /></ProtectedRoute>} />
+            <Route path="/pet/:id/checkup-reminder" element={<ProtectedRoute><CheckupReminder /></ProtectedRoute>} />
+            <Route path="/pet/:id/vaccinations" element={<ProtectedRoute><Vaccinations /></ProtectedRoute>} />
+            <Route path="/pet/:id/weight" element={<ProtectedRoute><LogWeight /></ProtectedRoute>} />
+            <Route path="/emergency" element={<ProtectedRoute><Emergency /></ProtectedRoute>} />
+            <Route path="/vets" element={<ProtectedRoute><Vets /></ProtectedRoute>} />
+            <Route path="/walk-service" element={<ProtectedRoute><WalkService /></ProtectedRoute>} />
+            <Route path="/pet-crutch" element={<ProtectedRoute><PetCrutch /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/pet/:id" element={<ProtectedRoute><PetProfile /></ProtectedRoute>} />
+            <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
+            
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

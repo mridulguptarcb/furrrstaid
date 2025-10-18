@@ -23,6 +23,12 @@ const Header = () => {
           <Link to="/vets" className="text-foreground/80 hover:text-primary transition-colors">
             Find Vets
           </Link>
+          <Link to="/walk-service" className="text-foreground/80 hover:text-primary transition-colors">
+            Walk Service
+          </Link>
+          <Link to="/pet-crutch" className="text-foreground/80 hover:text-primary transition-colors">
+            Pet Entrust
+          </Link>
           <Link to="/dashboard" className="text-foreground/80 hover:text-primary transition-colors">
             Dashboard
           </Link>

@@ -19,13 +19,14 @@ const Auth = () => {
 
     const name = (e.currentTarget.elements.namedItem("signup-name") as HTMLInputElement).value;
     const email = (e.currentTarget.elements.namedItem("signup-email") as HTMLInputElement).value;
+    const phone = (e.currentTarget.elements.namedItem("signup-phone") as HTMLInputElement).value;
     const password = (e.currentTarget.elements.namedItem("signup-password") as HTMLInputElement).value;
 
     try {
       const res = await fetch("http://127.0.0.1:8000/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, phone, password }),
       });
 
       if (res.ok) {
@@ -72,7 +73,7 @@ const Auth = () => {
           title: "Welcome back! 👋",
           description: "You've been signed in successfully.",
         });
-        navigate("/dashboard");
+        navigate("/"); // Redirect to home page instead of dashboard
       } else {
         const data = await res.json();
         toast({
@@ -179,6 +180,19 @@ const Auth = () => {
                       id="signup-email"
                       type="email"
                       placeholder="your@email.com"
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone">Phone Number</Label>
+                  <div className="relative">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                    <Input
+                      id="signup-phone"
+                      type="tel"
+                      placeholder="+1 (123) 456-7890"
                       className="pl-10"
                       required
                     />

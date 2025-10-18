@@ -1,11 +1,14 @@
 import { Link } from "react-router-dom"; 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Heart, Clock, MapPin, Shield, Activity, Phone } from "lucide-react";
+import { Heart, Clock, MapPin, Shield, Activity, Phone, MessageSquare, Star } from "lucide-react";
 import Header from "@/components/Header";
 import heroImage from "@/assets/hero-image.jpg";
 import featureVet from "@/assets/feature-vet.jpg";
 import featureCare from "@/assets/feature-care.jpg";
+import { useState, useEffect } from "react";
+import { statsAPI } from "@/services/api";
+import FeedbackForm from "@/components/FeedbackForm";
 
 const Home = () => {
   // === LOGIN CHECK ===
@@ -13,6 +16,34 @@ const Home = () => {
   if (!token) {
     window.location.href = "/auth"; // force login page
   }
+  
+  const [userCount, setUserCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [geminiCallCount, setGeminiCallCount] = useState(0);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // Fetch user count
+        const userResponse = await fetch("http://127.0.0.1:8000/stats/user-count");
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          setUserCount(userData.count);
+        }
+        
+        // Fetch Gemini API call count
+        const geminiData = await statsAPI.getGeminiCallCount();
+        setGeminiCallCount(geminiData.count);
+      } catch (error) {
+        console.error("Failed to fetch stats:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchStats();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -51,7 +82,11 @@ const Home = () => {
               <div className="flex items-center gap-6 pt-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Shield className="h-5 w-5 text-primary" />
-                  <span>Trusted by 5+ pet parents</span>
+                  <span>
+                    {isLoading 
+                      ? "Loading..." 
+                      : `Trusted by ${userCount}+ pet parents`}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Heart className="h-5 w-5 text-secondary" fill="currentColor" />
@@ -74,8 +109,8 @@ const Home = () => {
                     <Activity className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <p className="font-semibold">2+ Lives Saved</p>
-                    <p className="text-sm text-muted-foreground">This month</p>
+                    <p className="font-semibold">{geminiCallCount} Lives Saved</p>
+                    <p className="text-sm text-muted-foreground">Emergency AI Assists</p>
                   </div>
                 </div>
               </div>
@@ -209,10 +244,58 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Community & Feedback Section */}
+      <section className="py-20 px-4 bg-muted/30">
+        <div className="container mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <h2 className="text-4xl font-bold mb-4">Join Our Community</h2>
+            <p className="text-lg text-muted-foreground">
+              Connect with other pet parents and help us improve
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-8 mb-16">
+            {/* Feedback Card */}
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 cursor-pointer" onClick={() => setIsFeedbackOpen(true)}>
+              <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Star className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-2xl font-bold">Share Your Feedback</h3>
+                <p className="text-muted-foreground">
+                  Help us improve FurrstAid by sharing your experience and suggestions
+                </p>
+                <Button variant="outline" className="mt-4">
+                  Open Feedback Form
+                </Button>
+              </CardContent>
+            </Card>
+            
+            {/* Community Card */}
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 cursor-pointer">
+              <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center">
+                  <MessageSquare className="h-8 w-8 text-secondary" />
+                </div>
+                <h3 className="text-2xl font-bold">Community Forum</h3>
+                <p className="text-muted-foreground">
+                  Connect with other pet parents, share stories, and learn from each other
+                </p>
+                <Link to="/community">
+                  <Button variant="outline" className="mt-4">
+                    Visit Community
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+      
       {/* CTA Section */}
       <section className="py-20 px-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-secondary -z-10" />
-        <div className="container mx-auto text-center text-black">
+        <div className="container mx-auto text-center text-muted-foreground">
           <h2 className="text-4xl font-bold mb-4">Ready to Protect Your Best Friend?</h2>
           <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
             Join thousands of pet parents who trust FurrstAid for peace of mind
@@ -229,6 +312,9 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Feedback Form */}
+      <FeedbackForm isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
+      
       {/* Footer */}
       <footer className="border-t border-border py-12 px-4">
         <div className="container mx-auto">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,81 +10,55 @@ import {
   Star, 
   Navigation,
   Search,
-  Filter
+  Filter,
+  Loader2,
+  RefreshCw
 } from "lucide-react";
 import Header from "@/components/Header";
+import Map from "@/components/Map";
+import { findNearbyVets, getCurrentLocation, Coordinates, VetWithCoordinates } from "@/services/geolocation";
 
 const Vets = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [vets, setVets] = useState<VetWithCoordinates[]>([]);
+  const [allVets, setAllVets] = useState<VetWithCoordinates[]>([]);
+  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedVet, setSelectedVet] = useState<VetWithCoordinates | null>(null);
+  
+  // Filter states
+  const [activeFilters, setActiveFilters] = useState({
+    openNow: false,
+    emergency: false,
+    highlyRated: false,
+    all: true
+  });
 
-  // Mock vet data
-  const vets = [
-    {
-      id: 1,
-      name: "24*7 Pet Clinic-Best",
-      address: "24*7 Pet Clinic-Best, A-10, Vikas Marg, near Apsara Saree, opposite Metro Piller No 80, Block A, Swasthya Vihar, Delhi, 110092",
-      phone: "093109 28060",
-      distance: "0.8 km",
-      rating: 4.8,
-      reviews: 234,
-      isOpen: true,
-      isEmergency: true,
-      specialties: ["Emergency", "Surgery", "24/7"],
-      hours: "Open 24 hours"
-    },
-    {
-      id: 2,
-      name: "Wet-Pets",
-      address: "Wet-pets,7/181, Raja Ram Kohli Marg, Block 7, Geeta Colony, Delhi, 110031",
-      phone: "9540359475",
-      distance: "1.2 km",
-      rating: 4.9,
-      reviews: 456,
-      isOpen: true,
-      isEmergency: false,
-      specialties: ["General Care", "Dental", "Grooming"],
-      hours: "Mon-Sat: 8 AM - 6 PM"
-    },
-    {
-      id: 3,
-      name: "Govt Veterinary Hospital Seelampur",
-      address: "Govt Veterinary Hospital,M7CF+H7G, North Kanti Nagar, Block C, Seelampur, Shahdara, Delhi, 110053",
-      phone: "9811456237",
-      distance: "2.1 km",
-      rating: 4.7,
-      reviews: 189,
-      isOpen: true,
-      isEmergency: true,
-      specialties: ["Emergency", "Exotic Pets", "Cardiology"],
-      hours: "Open 24 hours"
-    },
-    {
-      id: 4,
-      name: "Shahdara Government Veterinary Hospital Delhi",
-      address: "Goverment Veterinary,M7HW+W9X, Circular Rd, छोटा बाजार, Jawala Nagar, Shahdara, Delhi, 110032",
-      phone: "9672585124",
-      distance: "3.5 km",
-      rating: 4.6,
-      reviews: 123,
-      isOpen: false,
-      isEmergency: false,
-      specialties: ["Farm Animals", "General Care"],
-      hours: "Mon-Fri: 9 AM - 5 PM"
-    },
-    {
-      id: 5,
-      name: "Life line dog clinic and pet care",
-      address: "Life line clinic , 26/5, backside of Manohar Bikkaneri Delhi 110051, Krishna Nagar, New Delhi, Delhi 110051",
-      phone: "9990388951",
-      distance: "4.2 km",
-      rating: 4.9,
-      reviews: 312,
-      isOpen: true,
-      isEmergency: false,
-      specialties: ["Surgery", "Oncology", "Rehabilitation"],
-      hours: "Mon-Sat: 7 AM - 7 PM"
-    }
-  ];
+
+  // Load nearby vets based on user location
+  useEffect(() => {
+    const loadNearbyVets = async () => {
+      setLoading(true);
+      try {
+        // Get user location
+        const location = await getCurrentLocation();
+        setUserLocation(location);
+        
+        // Find real nearby vets
+        const nearbyVets = await findNearbyVets(location);
+        setAllVets(nearbyVets);
+        setVets(nearbyVets);
+      } catch (error) {
+        console.error('Error loading nearby vets:', error);
+        // Set empty array if no vets found
+        setVets([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadNearbyVets();
+  }, []);
 
   const handleCall = (phone: string) => {
     window.location.href = `tel:${phone}`;
@@ -95,6 +69,97 @@ const Vets = () => {
     window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, '_blank');
   };
 
+  const handleVetSelect = (vet: VetWithCoordinates) => {
+    setSelectedVet(vet);
+  };
+
+  const handleRefreshVets = async () => {
+    setLoading(true);
+    try {
+      const location = await getCurrentLocation();
+      setUserLocation(location);
+      const nearbyVets = await findNearbyVets(location);
+      setAllVets(nearbyVets);
+      applyFilters(nearbyVets, searchQuery, activeFilters);
+    } catch (error) {
+      console.error('Error refreshing vets:', error);
+      setVets([]);
+      setAllVets([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filter functions
+  const applyFilters = (vetsToFilter: VetWithCoordinates[], query: string, filters: typeof activeFilters) => {
+    let filteredVets = [...vetsToFilter];
+
+    // Apply search query
+    if (query.trim()) {
+      const searchLower = query.toLowerCase();
+      filteredVets = filteredVets.filter(vet => 
+        vet.name.toLowerCase().includes(searchLower) ||
+        vet.address.toLowerCase().includes(searchLower) ||
+        vet.specialties?.some(specialty => specialty.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Apply filters
+    if (filters.openNow) {
+      filteredVets = filteredVets.filter(vet => vet.isOpen);
+    }
+
+    if (filters.emergency) {
+      filteredVets = filteredVets.filter(vet => vet.isEmergency);
+    }
+
+    if (filters.highlyRated) {
+      filteredVets = filteredVets.filter(vet => vet.rating && vet.rating >= 4.5);
+    }
+
+    setVets(filteredVets);
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    applyFilters(allVets, query, activeFilters);
+  };
+
+  const toggleFilter = (filterType: keyof typeof activeFilters) => {
+    const newFilters = { ...activeFilters };
+    
+    if (filterType === 'all') {
+      // Reset all filters
+      newFilters.all = true;
+      newFilters.openNow = false;
+      newFilters.emergency = false;
+      newFilters.highlyRated = false;
+    } else {
+      // Toggle specific filter
+      newFilters.all = false;
+      newFilters[filterType] = !newFilters[filterType];
+    }
+    
+    setActiveFilters(newFilters);
+    applyFilters(allVets, searchQuery, newFilters);
+  };
+
+  const handleOpenNowClick = () => {
+    const newFilters = { ...activeFilters };
+    newFilters.all = false;
+    newFilters.openNow = !newFilters.openNow;
+    setActiveFilters(newFilters);
+    applyFilters(allVets, searchQuery, newFilters);
+  };
+
+  const handleEmergencyClick = () => {
+    const newFilters = { ...activeFilters };
+    newFilters.all = false;
+    newFilters.emergency = !newFilters.emergency;
+    setActiveFilters(newFilters);
+    applyFilters(allVets, searchQuery, newFilters);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -103,9 +168,9 @@ const Vets = () => {
         <div className="container mx-auto max-w-6xl">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-2">Find Nearby Vets</h1>
+            <h1 className="text-4xl font-bold mb-2">Find Real Nearby Vets</h1>
             <p className="text-muted-foreground text-lg">
-              Trusted veterinary care when you need it most
+              Discover actual veterinary clinics near your location
             </p>
           </div>
 
@@ -118,58 +183,194 @@ const Vets = () => {
                   <Input 
                     placeholder="Search by name, specialty, or location..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-10"
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline">
-                    <Filter className="mr-2 h-4 w-4" />
-                    Filters
+                  <Button variant="outline" onClick={handleRefreshVets} disabled={loading}>
+                    <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    Refresh
                   </Button>
-                  <Button variant="outline">
+                  {(searchQuery || !activeFilters.all) && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        setSearchQuery("");
+                        toggleFilter('all');
+                      }}
+                    >
+                      <Filter className="mr-2 h-4 w-4" />
+                      Clear Filters
+                    </Button>
+                  )}
+                  <Button 
+                    variant="outline"
+                    onClick={() => toggleFilter('highlyRated')}
+                    className={activeFilters.highlyRated ? 'bg-primary text-primary-foreground' : ''}
+                  >
+                    <Star className="mr-2 h-4 w-4" />
+                    Highly Rated
+                    {activeFilters.highlyRated && (
+                      <span className="ml-1 bg-white/20 px-1 rounded text-xs">
+                        {allVets.filter(vet => vet.rating && vet.rating >= 4.5).length}
+                      </span>
+                    )}
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={handleOpenNowClick}
+                    className={activeFilters.openNow ? 'bg-primary text-primary-foreground' : ''}
+                  >
                     <Clock className="mr-2 h-4 w-4" />
                     Open Now
+                    {activeFilters.openNow && (
+                      <span className="ml-1 bg-white/20 px-1 rounded text-xs">
+                        {allVets.filter(vet => vet.isOpen).length}
+                      </span>
+                    )}
                   </Button>
                 </div>
               </div>
               
               <div className="flex flex-wrap gap-2 mt-4">
-                <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
+                <Badge 
+                  variant={activeFilters.all ? "default" : "secondary"}
+                  className="cursor-pointer hover:bg-secondary/80 transition-colors"
+                  onClick={() => toggleFilter('all')}
+                >
                   All
                 </Badge>
-                <Badge variant="outline" className="cursor-pointer hover:bg-muted">
+                <Badge 
+                  variant={activeFilters.emergency ? "default" : "outline"}
+                  className="cursor-pointer hover:bg-muted transition-colors"
+                  onClick={handleEmergencyClick}
+                >
                   Emergency 24/7
                 </Badge>
-                <Badge variant="outline" className="cursor-pointer hover:bg-muted">
+                <Badge 
+                  variant={activeFilters.openNow ? "default" : "outline"}
+                  className="cursor-pointer hover:bg-muted transition-colors"
+                  onClick={handleOpenNowClick}
+                >
                   Open Now
                 </Badge>
-                <Badge variant="outline" className="cursor-pointer hover:bg-muted">
+                <Badge 
+                  variant={activeFilters.highlyRated ? "default" : "outline"}
+                  className="cursor-pointer hover:bg-muted transition-colors"
+                  onClick={() => toggleFilter('highlyRated')}
+                >
                   Highly Rated
                 </Badge>
               </div>
             </CardContent>
           </Card>
 
-          {/* Map Placeholder */}
+          {/* Interactive Map */}
           <Card className="mb-8 overflow-hidden">
-            <div className="h-64 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center relative">
-              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMwLTkuOTQtOC4wNi0xOC0xOC0xOCIgc3Ryb2tlPSJyZ2JhKDI2LCAxNjcsIDE2NywgMC4xKSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-40" />
-              <div className="text-center z-10">
-                <MapPin className="h-12 w-12 text-primary mx-auto mb-2" />
-                <p className="text-muted-foreground">Map view showing {vets.length} nearby vets</p>
-              </div>
-            </div>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Interactive Map
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="h-64 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                  <div className="text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
+                    <p className="text-muted-foreground">Loading map and finding nearby vets...</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <Map 
+                    vets={vets}
+                    userLocation={userLocation ? [userLocation.latitude, userLocation.longitude] : undefined}
+                    onVetSelect={handleVetSelect}
+                    selectedVetId={selectedVet?.id}
+                  />
+                  {vets.length > 0 && (
+                    <p className="text-sm text-muted-foreground mt-2 text-center">
+                      Found {vets.length} real veterinary clinics near your location
+                    </p>
+                  )}
+                </>
+              )}
+            </CardContent>
           </Card>
 
           {/* Vet List */}
           <div className="space-y-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">{vets.length} Vets Near You</h2>
+              <div>
+                <h2 className="text-2xl font-bold">
+                  {vets.length === allVets.length 
+                    ? "Top 5 Nearest Vets" 
+                    : `${vets.length} Vets Found`
+                  }
+                </h2>
+                {searchQuery && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Searching for: "{searchQuery}"
+                  </p>
+                )}
+                {(activeFilters.openNow || activeFilters.emergency || activeFilters.highlyRated) && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Filters: {[
+                      activeFilters.openNow && "Open Now",
+                      activeFilters.emergency && "Emergency",
+                      activeFilters.highlyRated && "Highly Rated"
+                    ].filter(Boolean).join(", ")}
+                  </p>
+                )}
+              </div>
               <span className="text-sm text-muted-foreground">Sorted by distance</span>
             </div>
 
-            {vets.map((vet) => (
+            {loading ? (
+              <div className="space-y-4">
+                {[...Array(5)].map((_, index) => (
+                  <Card key={index} className="animate-pulse">
+                    <CardHeader>
+                      <div className="h-6 bg-muted rounded w-3/4 mb-2"></div>
+                      <div className="h-4 bg-muted rounded w-1/2"></div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-4 bg-muted rounded w-full mb-2"></div>
+                      <div className="h-4 bg-muted rounded w-2/3"></div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : vets.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">
+                    {searchQuery || !activeFilters.all ? "No vets match your criteria" : "No vets found"}
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    {searchQuery || !activeFilters.all 
+                      ? "Try adjusting your search terms or filters to see more results."
+                      : "Try adjusting your location or refresh to find nearby vets."
+                    }
+                  </p>
+                  {(searchQuery || !activeFilters.all) && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setSearchQuery("");
+                        toggleFilter('all');
+                      }}
+                    >
+                      Clear all filters
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              vets.map((vet) => (
               <Card key={vet.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-4">
                   <div className="flex flex-col sm:flex-row justify-between gap-4">
@@ -241,7 +442,8 @@ const Vets = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

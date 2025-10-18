@@ -13,7 +13,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Save, Loader2, Scale, TrendingUp, TrendingDown, Minus, AlertCircle, CheckCircle, Sparkles, Zap, Star, Crown, Heart, Activity, BarChart3, Calendar, Target } from "lucide-react";
 import { format } from "date-fns";
 import Header from "@/components/Header";
-import { petAPI, Pet } from "@/services/api";
+import { petAPI, Pet, weightAPI, WeightLog } from "@/services/api";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 
 const weightLogSchema = z.object({
   weight_kg: z.number().min(0.1, "Weight must be greater than 0").max(200, "Weight must be realistic"),
@@ -26,15 +28,7 @@ const weightLogSchema = z.object({
 
 type WeightLogFormData = z.infer<typeof weightLogSchema>;
 
-interface WeightEntry {
-  id: number;
-  weight_kg: number;
-  date: string;
-  notes?: string;
-  body_condition_score?: number;
-  activity_level?: string;
-  feeding_amount?: string;
-}
+type WeightEntry = WeightLog;
 
 const LogWeight = () => {
   const { id } = useParams();
@@ -72,20 +66,13 @@ const LogWeight = () => {
         setPet(petData);
         setCurrentWeight(petData.weight_kg);
 
-        // Mock weight history data - in real app, this would come from API
-        const mockHistory: WeightEntry[] = [
-          { id: 1, weight_kg: 12.5, date: "2024-01-15", notes: "After vet visit", body_condition_score: 5 },
-          { id: 2, weight_kg: 12.8, date: "2024-02-15", notes: "Regular check", body_condition_score: 5 },
-          { id: 3, weight_kg: 13.1, date: "2024-03-15", notes: "Post-vaccination", body_condition_score: 6 },
-          { id: 4, weight_kg: 12.9, date: "2024-04-15", notes: "Diet adjustment", body_condition_score: 5 },
-          { id: 5, weight_kg: 13.2, date: "2024-05-15", notes: "Summer weight", body_condition_score: 6 },
-        ];
-        setWeightHistory(mockHistory);
+        const history = await weightAPI.getWeightLogs(parseInt(id));
+        setWeightHistory(history);
 
         // Calculate weight trend
-        if (mockHistory.length >= 2) {
-          const latest = mockHistory[mockHistory.length - 1].weight_kg;
-          const previous = mockHistory[mockHistory.length - 2].weight_kg;
+        if (history.length >= 2) {
+          const latest = history[history.length - 1].weight_kg;
+          const previous = history[history.length - 2].weight_kg;
           if (latest > previous + 0.1) setWeightTrend('up');
           else if (latest < previous - 0.1) setWeightTrend('down');
           else setWeightTrend('stable');
@@ -104,14 +91,37 @@ const LogWeight = () => {
     try {
       setLoading(true);
       
-      // Here you would typically call an API to log the weight
-      // For now, we'll simulate the API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (!id || !pet) return;
+      await weightAPI.createWeightLog({
+        pet_id: parseInt(id),
+        weight_kg: data.weight_kg,
+        date: new Date(data.date).toISOString(),
+        notes: data.notes,
+        body_condition_score: data.body_condition_score,
+        activity_level: data.activity_level,
+        feeding_amount: data.feeding_amount,
+      });
+
+      // Refresh pet and weight history
+      const [updatedPet, history] = await Promise.all([
+        petAPI.getPet(parseInt(id)),
+        weightAPI.getWeightLogs(parseInt(id)),
+      ]);
+      setPet(updatedPet);
+      setCurrentWeight(updatedPet.weight_kg);
+      setWeightHistory(history);
+      if (history.length >= 2) {
+        const latest = history[history.length - 1].weight_kg;
+        const previous = history[history.length - 2].weight_kg;
+        if (latest > previous + 0.1) setWeightTrend('up');
+        else if (latest < previous - 0.1) setWeightTrend('down');
+        else setWeightTrend('stable');
+      }
       
       setSuccess(true);
       setTimeout(() => {
         navigate(`/pet/${id}`);
-      }, 2000);
+      }, 1500);
     } catch (error) {
       console.error("Error logging weight:", error);
     } finally {
@@ -489,30 +499,42 @@ const LogWeight = () => {
                 <CardContent className="p-6">
                   {weightHistory.length > 0 ? (
                     <div className="space-y-4">
-                      {/* Simple Chart Visualization */}
-                      <div className="h-64 bg-gradient-to-r from-muted/30 to-card rounded-xl p-6 border border-border">
-                        <div className="flex items-end justify-between h-full">
-                          {weightHistory.map((entry, index) => {
-                            const maxWeight = Math.max(...weightHistory.map(e => e.weight_kg));
-                            const minWeight = Math.min(...weightHistory.map(e => e.weight_kg));
-                            const height = ((entry.weight_kg - minWeight) / (maxWeight - minWeight)) * 100;
-                            
-                            return (
-                              <div key={entry.id} className="flex flex-col items-center">
-                                <div 
-                                  className="w-8 bg-gradient-to-t from-primary to-secondary rounded-t-lg transition-all duration-300 hover:opacity-80"
-                                  style={{ height: `${Math.max(height, 10)}%` }}
-                                  title={`${entry.weight_kg}kg on ${format(new Date(entry.date), "MMM dd, yyyy")}`}
-                                />
-                                <div className="mt-2 text-xs text-center">
-                                  <div className="font-semibold">{entry.weight_kg}kg</div>
-                                  <div className="text-muted-foreground">{format(new Date(entry.date), "MMM dd")}</div>
-                                </div>
+                      {/* Line Chart Visualization */}
+                      <ChartContainer
+                        className="w-full rounded-xl border border-border bg-gradient-to-r from-muted/30 to-card p-2"
+                        config={{
+                          weight: { label: "Weight (kg)", color: "hsl(var(--primary))" },
+                        }}
+                      >
+                        <LineChart
+                          data={weightHistory.map((e) => ({
+                            dateLabel: format(new Date(e.date), "MMM dd"),
+                            weight: e.weight_kg,
+                          }))}
+                          margin={{ top: 10, right: 20, bottom: 10, left: 10 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                          <XAxis dataKey="dateLabel" stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
+                          <YAxis
+                            stroke="hsl(var(--muted-foreground))"
+                            tickLine={false}
+                            axisLine={false}
+                            width={40}
+                            allowDecimals={false}
+                          />
+                          <ChartTooltip
+                            cursor={{ fill: "hsl(var(--muted)/0.3)" }}
+                            content={<ChartTooltipContent labelKey="weight" />}
+                            formatter={(value: number) => (
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">Weight</span>
+                                <span className="font-mono font-medium">{value.toFixed(1)} kg</span>
                               </div>
-                            );
-                          })}
-                        </div>
-                      </div>
+                            )}
+                          />
+                          <Line type="monotone" dataKey="weight" stroke="var(--color-weight)" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                        </LineChart>
+                      </ChartContainer>
 
                       {/* Weight History Table */}
                       <div className="space-y-2">

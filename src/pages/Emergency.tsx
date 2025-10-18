@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { 
   AlertCircle, 
@@ -30,6 +32,9 @@ const Emergency = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [customEmergency, setCustomEmergency] = useState<string>("");
+  const [aiLoading, setAiLoading] = useState<boolean>(false);
+  const [aiAdvice, setAiAdvice] = useState<string>("");
 
   useEffect(() => {
     const fetchPets = async () => {
@@ -117,6 +122,18 @@ const Emergency = () => {
     };
 
     return guidance[symptom] || guidance.bleeding;
+  };
+
+  const callGemini = async (prompt: string) => {
+    const res = await fetch(`http://localhost:8000/api/ai/gemini`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+    if (!res.ok) throw new Error("Gemini request failed");
+    const data = await res.json();
+    const text = data?.text || "No advice generated.";
+    return text as string;
   };
 
   const handleCallVet = () => {
@@ -350,6 +367,48 @@ const Emergency = () => {
                       <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-destructive" />
                     </button>
                   ))}
+                </div>
+
+                {/* Custom Emergency */}
+                <div className="mt-8 p-4 rounded-lg border border-border bg-muted/20">
+                  <h4 className="font-semibold mb-2">Or describe your situation</h4>
+                  <p className="text-sm text-muted-foreground mb-3">Enter a brief description of the emergency to get tailored first-aid guidance.</p>
+                  <Textarea
+                    placeholder="e.g., My dog ate chocolate about 20 minutes ago and is drooling."
+                    value={customEmergency}
+                    onChange={(e) => setCustomEmergency(e.target.value)}
+                    rows={3}
+                  />
+                  <div className="mt-3 flex items-center gap-2">
+                    <Button
+                      disabled={!customEmergency || aiLoading}
+                      onClick={async () => {
+                        try {
+                          setAiLoading(true);
+                          setAiAdvice("");
+                          const pet = pets.find(p => p.id === selectedPet);
+                          const species = pet?.species || "pet";
+                          const prompt = `You are a veterinary first-aid assistant. Provide concise, safe, step-by-step guidance for the following custom emergency for a ${species}. Avoid diagnoses; focus on first-aid and when to call a vet. Situation: ${customEmergency}`;
+                          const advice = await callGemini(prompt);
+                          setAiAdvice(advice);
+                        } catch (e) {
+                          setAiAdvice("Failed to get advice. Please try again.");
+                        } finally {
+                          setAiLoading(false);
+                        }
+                      }}
+                    >
+                      {aiLoading ? "Getting Advice..." : "Get Advice"}
+                    </Button>
+                    {aiLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                  </div>
+
+                  {aiAdvice && (
+                    <div className="mt-4 p-4 rounded-lg bg-card border border-border">
+                      <h5 className="font-semibold mb-2">AI First-Aid Guidance</h5>
+                      <div className="prose prose-sm max-w-none whitespace-pre-wrap">{aiAdvice}</div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

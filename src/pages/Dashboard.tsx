@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { userAPI } from "@/services/api";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -31,6 +32,25 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [markingIds, setMarkingIds] = useState<Set<string>>(new Set());
+  const [userName, setUserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserName = async () => {
+      try {
+        const response = await userAPI.getUserName();
+        if (response && response.name) {
+          setUserName(response.name);
+          console.log("User name fetched successfully:", response.name);
+        } else {
+          console.error("User name not found in response:", response);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user name:", error);
+      }
+    };
+
+    fetchUserName();
+  }, []);
 
   // Load pets and alerts from backend
   useEffect(() => {
@@ -193,7 +213,7 @@ const Dashboard = () => {
           {/* Welcome Section */}
           <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-4xl font-bold mb-2">Welcome back, Pet Parent! 👋</h1>
+              <h1 className="text-4xl font-bold mb-2">Welcome back, {userName || "Pet Parent"}! 👋</h1>
               <p className="text-muted-foreground">Here's what's happening with your furry friends</p>
             </div>
             <Link to="/add-pet">

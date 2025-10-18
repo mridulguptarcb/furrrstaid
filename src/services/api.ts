@@ -1,6 +1,20 @@
 // API service layer for frontend-backend communication
 const API_BASE_URL = 'http://localhost:8000/api';
 
+// Function to get the authentication token from local storage
+const getAuthToken = (): string | null => {
+  return localStorage.getItem('token'); // Corrected key to 'token'
+};
+
+// Function to create headers with authorization
+const getAuthHeaders = () => {
+  const token = getAuthToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+  };
+};
+
 // Types
 export interface Pet {
   id: number;
@@ -180,7 +194,9 @@ export interface UpcomingAlert {
 export const petAPI = {
   // Get all pets
   async getPets(): Promise<Pet[]> {
-    const response = await fetch(`${API_BASE_URL}/pets`);
+    const response = await fetch(`${API_BASE_URL}/pets`, {
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) {
       throw new Error('Failed to fetch pets');
     }
@@ -189,7 +205,9 @@ export const petAPI = {
 
   // Get single pet
   async getPet(id: number): Promise<Pet> {
-    const response = await fetch(`${API_BASE_URL}/pets/${id}`);
+    const response = await fetch(`${API_BASE_URL}/pets/${id}`, {
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) {
       throw new Error('Failed to fetch pet');
     }
@@ -200,9 +218,7 @@ export const petAPI = {
   async createPet(pet: PetCreate): Promise<Pet> {
     const response = await fetch(`${API_BASE_URL}/pets`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(pet),
     });
     if (!response.ok) {
@@ -215,9 +231,7 @@ export const petAPI = {
   async updatePet(id: number, pet: PetUpdate): Promise<Pet> {
     const response = await fetch(`${API_BASE_URL}/pets/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(pet),
     });
     if (!response.ok) {
@@ -230,6 +244,7 @@ export const petAPI = {
   async deletePet(id: number): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/pets/${id}`, {
       method: 'DELETE',
+      headers: getAuthHeaders(),
     });
     if (!response.ok) {
       throw new Error('Failed to delete pet');
@@ -275,11 +290,13 @@ export const breedAPI = {
 export const checkupReminderAPI = {
   // Get all checkup reminders
   async getCheckupReminders(petId?: number): Promise<CheckupReminder[]> {
-    const url = petId 
+    let url = petId 
       ? `${API_BASE_URL}/checkup-reminders?pet_id=${petId}`
       : `${API_BASE_URL}/checkup-reminders`;
     
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) {
       throw new Error('Failed to fetch checkup reminders');
     }
@@ -288,7 +305,9 @@ export const checkupReminderAPI = {
 
   // Get single checkup reminder
   async getCheckupReminder(id: number): Promise<CheckupReminder> {
-    const response = await fetch(`${API_BASE_URL}/checkup-reminders/${id}`);
+    const response = await fetch(`${API_BASE_URL}/checkup-reminders/${id}`, {
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) {
       throw new Error('Failed to fetch checkup reminder');
     }
@@ -299,9 +318,7 @@ export const checkupReminderAPI = {
   async createCheckupReminder(reminder: CheckupReminderCreate): Promise<CheckupReminder> {
     const response = await fetch(`${API_BASE_URL}/checkup-reminders`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(reminder),
     });
     if (!response.ok) {
@@ -314,9 +331,7 @@ export const checkupReminderAPI = {
   async updateCheckupReminder(id: number, reminder: Partial<CheckupReminderCreate>): Promise<CheckupReminder> {
     const response = await fetch(`${API_BASE_URL}/checkup-reminders/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(reminder),
     });
     if (!response.ok) {
@@ -329,6 +344,7 @@ export const checkupReminderAPI = {
   async deleteCheckupReminder(id: number): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/checkup-reminders/${id}`, {
       method: 'DELETE',
+      headers: getAuthHeaders(),
     });
     if (!response.ok) {
       throw new Error('Failed to delete checkup reminder');
@@ -345,7 +361,9 @@ export const vaccinationAPI = {
     if (isScheduled !== undefined) params.append('is_scheduled', isScheduled.toString());
     if (params.toString()) url += `?${params.toString()}`;
     
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) {
       throw new Error('Failed to fetch vaccinations');
     }
@@ -354,7 +372,9 @@ export const vaccinationAPI = {
 
   // Get single vaccination
   async getVaccination(id: number): Promise<Vaccination> {
-    const response = await fetch(`${API_BASE_URL}/vaccinations/${id}`);
+    const response = await fetch(`${API_BASE_URL}/vaccinations/${id}`, {
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) {
       throw new Error('Failed to fetch vaccination');
     }
@@ -365,9 +385,7 @@ export const vaccinationAPI = {
   async recordVaccination(vaccination: VaccinationRecordCreate): Promise<Vaccination> {
     const response = await fetch(`${API_BASE_URL}/vaccinations/record`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(vaccination),
     });
     if (!response.ok) {
@@ -380,9 +398,7 @@ export const vaccinationAPI = {
   async scheduleVaccination(vaccination: VaccinationScheduleCreate): Promise<Vaccination> {
     const response = await fetch(`${API_BASE_URL}/vaccinations/schedule`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(vaccination),
     });
     if (!response.ok) {
@@ -395,9 +411,7 @@ export const vaccinationAPI = {
   async updateVaccination(id: number, vaccination: Partial<VaccinationRecordCreate | VaccinationScheduleCreate>): Promise<Vaccination> {
     const response = await fetch(`${API_BASE_URL}/vaccinations/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(vaccination),
     });
     if (!response.ok) {
@@ -410,6 +424,7 @@ export const vaccinationAPI = {
   async deleteVaccination(id: number): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/vaccinations/${id}`, {
       method: 'DELETE',
+      headers: getAuthHeaders(),
     });
     if (!response.ok) {
       throw new Error('Failed to delete vaccination');
@@ -420,9 +435,260 @@ export const vaccinationAPI = {
 export const alertsAPI = {
   // Get upcoming alerts for dashboard
   async getUpcomingAlerts(days: number = 7): Promise<UpcomingAlert[]> {
-    const response = await fetch(`${API_BASE_URL}/upcoming-alerts?days=${days}`);
+    const response = await fetch(`${API_BASE_URL}/upcoming-alerts?days=${days}`, {
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) {
       throw new Error('Failed to fetch upcoming alerts');
+    }
+    return response.json();
+  },
+};
+
+// Weight logs
+export interface WeightLog {
+  id: number;
+  pet_id: number;
+  weight_kg: number;
+  date: string; // ISO string
+  notes?: string;
+  body_condition_score?: number;
+  activity_level?: string;
+  feeding_amount?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WeightLogCreate {
+  pet_id: number;
+  weight_kg: number;
+  date: string; // ISO
+  notes?: string;
+  body_condition_score?: number;
+  activity_level?: string;
+  feeding_amount?: string;
+}
+
+export const weightAPI = {
+  async getWeightLogs(petId: number): Promise<WeightLog[]> {
+    const response = await fetch(`${API_BASE_URL}/weight-logs?pet_id=${petId}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch weight logs');
+    }
+    return response.json();
+  },
+
+  async createWeightLog(payload: WeightLogCreate): Promise<WeightLog> {
+    const response = await fetch(`${API_BASE_URL}/weight-logs`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to create weight log');
+    }
+    return response.json();
+  },
+};
+
+// Walkers and walk bookings
+export interface Walker {
+  id: number;
+  name: string;
+  bio?: string;
+  rate_per_hour: number;
+  rating?: number;
+  categories?: string; // comma-separated
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WalkerCreate {
+  name: string;
+  bio?: string;
+  rate_per_hour: number;
+  rating?: number;
+  categories?: string;
+  is_active?: boolean;
+}
+
+export interface WalkBooking {
+  id: number;
+  pet_id: number;
+  walker_id: number;
+  scheduled_date: string; // ISO
+  scheduled_time: string;
+  duration_minutes: number;
+  total_cost: number;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WalkBookingCreate {
+  pet_id: number;
+  walker_id: number;
+  scheduled_date: string; // ISO
+  scheduled_time: string;
+  duration_minutes: number;
+  notes?: string;
+}
+
+export const walkersAPI = {
+  async getWalkers(): Promise<Walker[]> {
+    const response = await fetch(`${API_BASE_URL}/walkers`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch walkers');
+    return response.json();
+  },
+  async createWalker(payload: WalkerCreate): Promise<Walker> {
+    const response = await fetch(`${API_BASE_URL}/walkers`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error('Failed to create walker');
+    return response.json();
+  },
+};
+
+export const walkBookingsAPI = {
+  async getBookings(petId?: number): Promise<WalkBooking[]> {
+    const url = petId ? `${API_BASE_URL}/walk-bookings?pet_id=${petId}` : `${API_BASE_URL}/walk-bookings`;
+    const response = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch walk bookings');
+    return response.json();
+  },
+  async createBooking(payload: WalkBookingCreate): Promise<WalkBooking> {
+    const response = await fetch(`${API_BASE_URL}/walk-bookings`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error('Failed to create walk booking');
+    return response.json();
+  },
+};
+
+// Pet Crutch (boarding/pick & drop)
+export interface CrutchVolunteer {
+  id: number;
+  name: string;
+  bio?: string;
+  rate_per_day: number;
+  rating?: number;
+  categories?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CrutchVolunteerCreate {
+  name: string;
+  bio?: string;
+  rate_per_day: number;
+  rating?: number;
+  categories?: string;
+  is_active?: boolean;
+}
+
+export interface CrutchBooking {
+  id: number;
+  pet_id: number;
+  volunteer_id: number;
+  pickup_date: string;
+  dropoff_date: string;
+  pickup_address: string;
+  dropoff_address: string;
+  total_cost: number;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CrutchBookingCreate {
+  pet_id: number;
+  volunteer_id: number;
+  pickup_date: string;
+  dropoff_date: string;
+  pickup_address: string;
+  dropoff_address: string;
+  notes?: string;
+}
+
+export const crutchVolunteersAPI = {
+  async getVolunteers(): Promise<CrutchVolunteer[]> {
+    const response = await fetch(`${API_BASE_URL}/crutch-volunteers`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch crutch volunteers');
+    return response.json();
+  },
+  async createVolunteer(payload: CrutchVolunteerCreate): Promise<CrutchVolunteer> {
+    const response = await fetch(`${API_BASE_URL}/crutch-volunteers`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error('Failed to create crutch volunteer');
+    return response.json();
+  },
+};
+
+export const crutchBookingsAPI = {
+  async getBookings(petId?: number): Promise<CrutchBooking[]> {
+    const url = petId ? `${API_BASE_URL}/crutch-bookings?pet_id=${petId}` : `${API_BASE_URL}/crutch-bookings`;
+    const response = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch crutch bookings');
+    return response.json();
+  },
+  async createBooking(payload: CrutchBookingCreate): Promise<CrutchBooking> {
+    const response = await fetch(`${API_BASE_URL}/crutch-bookings`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error('Failed to create crutch booking');
+    return response.json();
+  },
+};
+
+export const userAPI = {
+  getMe: async () => {
+    const response = await fetch(`${API_BASE_URL}/users/me`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch user data');
+    }
+    return response.json();
+  },
+  
+  getUserName: async () => {
+    const response = await fetch(`${API_BASE_URL}/user/name`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch user name');
+    }
+    return response.json();
+  },
+};
+
+// Stats API
+export const statsAPI = {
+  getGeminiCallCount: async () => {
+    const response = await fetch(`${API_BASE_URL}/stats/gemini-calls`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch Gemini API call count');
     }
     return response.json();
   },
