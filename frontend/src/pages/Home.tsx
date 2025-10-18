@@ -26,7 +26,7 @@ const Home = () => {
     const fetchStats = async () => {
       try {
         // Fetch user count
-        const userResponse = await fetch("http://127.0.0.1:8000/stats/user-count");
+        const userResponse = await fetch("/stats/user-count");
         if (userResponse.ok) {
           const userData = await userResponse.json();
           setUserCount(userData.count);

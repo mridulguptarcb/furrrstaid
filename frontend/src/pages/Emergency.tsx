@@ -125,7 +125,7 @@ const Emergency = () => {
   };
 
   const callGemini = async (prompt: string) => {
-    const res = await fetch(`http://localhost:8000/api/ai/gemini`, {
+    const res = await fetch(`/api/ai/gemini`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt }),

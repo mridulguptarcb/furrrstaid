@@ -13,6 +13,9 @@ from datetime import datetime, date
 import uvicorn
 import httpx
 import google.generativeai as genai
+from fastapi.staticfiles import StaticFiles
+import os
+
 
 # Database setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./furrstaid.db"
@@ -912,11 +915,6 @@ def init_default_data():
 async def startup_event():
     init_default_data()
 
-# API Routes
-@app.get("/")
-async def root():
-    return {"message": "FurrstAid API is running!"}
-
 # Stats model for storing counters
 class Stats(Base):
     __tablename__ = "stats"
@@ -1158,7 +1156,8 @@ async def create_community_post(post: CommunityPostCreate, current_user: User = 
         "image_url": db_post.image_url,
         "created_at": db_post.created_at,
         "user_name": current_user.name,
-        "comment_count": 0
+        "comment_count": 0,
+        "like_count": 0
     }
 
 @app.get("/api/community/posts/{post_id}/comments", response_model=List[CommentResponse])
@@ -1695,6 +1694,23 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
 async def get_user_name(current_user: User = Depends(get_current_user)):
     """Get only the name of the currently logged in user"""
     return {"name": current_user.name}
+
+from fastapi.responses import FileResponse
+
+app.mount("/assets", StaticFiles(directory=os.path.join("static", "assets")), name="assets")
+
+# Serve index.html at root
+@app.get("/")
+def serve_index():
+    return FileResponse(os.path.join("static", "index.html"))
+
+# Catch-all route for React Router (all non-API paths)
+@app.get("/{full_path:path}")
+def catch_all(full_path: str):
+    # Don't catch API routes
+    if full_path.startswith("api/"):
+        return {"error": "API endpoint not found"}
+    return FileResponse(os.path.join("static", "index.html"))
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -1,5 +1,5 @@
 // API service layer for frontend-backend communication
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = '/api';
 
 // Function to get the authentication token from local storage
 const getAuthToken = (): string | null => {

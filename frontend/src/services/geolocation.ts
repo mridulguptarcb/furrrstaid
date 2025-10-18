@@ -108,7 +108,7 @@ export const findNearbyVets = async (
   try {
     // Use backend API to search for nearby vets
     const response = await fetch(
-      `http://localhost:8000/api/vets/search?latitude=${location.latitude}&longitude=${location.longitude}&radius_km=10&limit=5`
+      `/api/vets/search?latitude=${location.latitude}&longitude=${location.longitude}&radius_km=10&limit=5`
     );
     
     if (!response.ok) {

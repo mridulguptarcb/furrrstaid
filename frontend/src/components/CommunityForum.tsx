@@ -54,7 +54,7 @@ const CommunityForum = () => {
     // Don't set error state to prevent error messages
     
     try {
-      const response = await fetch("http://localhost:8000/api/community/posts");
+      const response = await fetch("/api/community/posts");
       
       if (response.ok) {
         const data = await response.json();
@@ -72,7 +72,7 @@ const CommunityForum = () => {
     setLoadingComments(true);
     
     try {
-      const response = await fetch(`http://localhost:8000/api/community/posts/${postId}/comments`);
+      const response = await fetch(`/api/community/posts/${postId}/comments`);
       
       if (response.ok) {
         const data = await response.json();
@@ -128,7 +128,7 @@ const CommunityForum = () => {
     
     // Use XMLHttpRequest instead of fetch for better error handling
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "http://localhost:8000/api/community/posts", true);
+    xhr.open("POST", "/api/community/posts", true);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.setRequestHeader("Authorization", `Bearer ${localStorage.getItem("token")}`);
     
@@ -196,7 +196,7 @@ const CommunityForum = () => {
     
     // Use XMLHttpRequest instead of fetch for better error handling
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `http://localhost:8000/api/community/posts/${postId}/comments`, true);
+    xhr.open("POST", `/api/community/posts/${postId}/comments`, true);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.setRequestHeader("Authorization", `Bearer ${localStorage.getItem("token")}`);
     

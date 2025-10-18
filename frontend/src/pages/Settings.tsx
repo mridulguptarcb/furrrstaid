@@ -43,7 +43,7 @@ const Settings = () => {
           return;
         }
 
-        const res = await fetch("http://127.0.0.1:8000/user/profile", {
+        const res = await fetch("/user/profile", {
           headers: {
             "Authorization": `Bearer ${token}`
           }
@@ -100,7 +100,7 @@ const Settings = () => {
         return;
       }
 
-      const res = await fetch("http://127.0.0.1:8000/user/update", {
+      const res = await fetch("/user/update", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

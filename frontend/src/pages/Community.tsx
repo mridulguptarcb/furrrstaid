@@ -61,7 +61,7 @@ const Community = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://localhost:8000/api/community/posts", {
+      const response = await fetch("/api/community/posts", {
         headers: {
           "Authorization": `Bearer ${localStorage.getItem("token")}`
         }
@@ -98,7 +98,7 @@ const Community = () => {
   const fetchComments = async (postId: number) => {
     setLoadingComments(true);
     try {
-      const response = await fetch(`http://localhost:8000/api/community/posts/${postId}/comments`);
+      const response = await fetch(`/api/community/posts/${postId}/comments`);
       if (!response.ok) {
         throw new Error("Failed to fetch comments");
       }
@@ -143,7 +143,7 @@ const Community = () => {
       // In a real app, you would upload the image to a server or cloud storage
       const imageUrl = newPostImagePreview || null;
       
-      const response = await fetch("http://localhost:8000/api/community/posts", {
+      const response = await fetch("/api/community/posts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -201,7 +201,7 @@ const Community = () => {
     setIsSubmitting(true);
     
     try {
-      const response = await fetch(`http://localhost:8000/api/community/posts/${selectedPost.id}/comments`, {
+      const response = await fetch(`/api/community/posts/${selectedPost.id}/comments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -242,7 +242,7 @@ const Community = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:8000/api/community/comments/${commentId}`, {
+      const response = await fetch(`/api/community/comments/${commentId}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${localStorage.getItem("token")}`
@@ -281,7 +281,7 @@ const Community = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:8000/api/community/posts/${postId}/like`, {
+      const response = await fetch(`/api/community/posts/${postId}/like`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${localStorage.getItem("token")}`
@@ -322,7 +322,7 @@ const Community = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:8000/api/community/posts/${postId}`, {
+      const response = await fetch(`/api/community/posts/${postId}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${localStorage.getItem("token")}`
