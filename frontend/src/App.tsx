@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 import WalkService from "./pages/WalkService";
 import PetCrutch from "./pages/PetCrutch";
 import Community from "./pages/Community";
+import Diet from "./pages/Diet";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/emergency" element={<ProtectedRoute><Emergency /></ProtectedRoute>} />
             <Route path="/vets" element={<ProtectedRoute><Vets /></ProtectedRoute>} />
             <Route path="/walk-service" element={<ProtectedRoute><WalkService /></ProtectedRoute>} />
+            <Route path="/diet" element={<ProtectedRoute><Diet /></ProtectedRoute>} />
             <Route path="/pet-crutch" element={<ProtectedRoute><PetCrutch /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/pet/:id" element={<ProtectedRoute><PetProfile /></ProtectedRoute>} />

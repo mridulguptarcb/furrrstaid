@@ -8,6 +8,7 @@ import featureVet from "@/assets/feature-vet.jpg";
 import featureCare from "@/assets/feature-care.jpg";
 import { useState, useEffect } from "react";
 import { statsAPI } from "@/services/api";
+import { buildApiUrl } from "@/lib/config";
 import FeedbackForm from "@/components/FeedbackForm";
 
 const Home = () => {
@@ -26,7 +27,7 @@ const Home = () => {
     const fetchStats = async () => {
       try {
         // Fetch user count
-        const userResponse = await fetch("/stats/user-count");
+        const userResponse = await fetch(buildApiUrl("/stats/user-count"));
         if (userResponse.ok) {
           const userData = await userResponse.json();
           setUserCount(userData.count);

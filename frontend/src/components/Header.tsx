@@ -26,6 +26,9 @@ const Header = () => {
           <Link to="/walk-service" className="text-foreground/80 hover:text-primary transition-colors">
             Walk Service
           </Link>
+          <Link to="/diet" className="text-foreground/80 hover:text-primary transition-colors">
+            Diet
+          </Link>
           <Link to="/pet-crutch" className="text-foreground/80 hover:text-primary transition-colors">
             Pet Entrust
           </Link>

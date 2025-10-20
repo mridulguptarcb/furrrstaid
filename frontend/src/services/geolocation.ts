@@ -88,6 +88,7 @@ export const formatDistance = (distance: number): string => {
 };
 
 // Find nearby vets based on user location using backend API
+import { buildApiUrl } from "@/lib/config";
 export const findNearbyVets = async (
   userLocation?: Coordinates
 ): Promise<VetWithCoordinates[]> => {
@@ -108,7 +109,7 @@ export const findNearbyVets = async (
   try {
     // Use backend API to search for nearby vets
     const response = await fetch(
-      `/api/vets/search?latitude=${location.latitude}&longitude=${location.longitude}&radius_km=10&limit=5`
+      buildApiUrl(`/api/vets/search?latitude=${location.latitude}&longitude=${location.longitude}&radius_km=10&limit=5`)
     );
     
     if (!response.ok) {

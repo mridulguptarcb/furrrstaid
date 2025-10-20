@@ -19,7 +19,9 @@ import {
   Dog,
   Cat,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Volume2,
+  Pause
 } from "lucide-react";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +37,9 @@ const Emergency = () => {
   const [customEmergency, setCustomEmergency] = useState<string>("");
   const [aiLoading, setAiLoading] = useState<boolean>(false);
   const [aiAdvice, setAiAdvice] = useState<string>("");
+  const [audioUrl, setAudioUrl] = useState<string>("");
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+
 
   useEffect(() => {
     const fetchPets = async () => {
@@ -130,11 +135,42 @@ const Emergency = () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt }),
     });
+    
     if (!res.ok) throw new Error("Gemini request failed");
     const data = await res.json();
     const text = data?.text || "No advice generated.";
+    // Audio
+    if (data.audio_base64) {
+      const audioBlob = new Blob(
+        [Uint8Array.from(atob(data.audio_base64), c => c.charCodeAt(0))],
+        { type: "audio/mp3" }
+      );
+      setAudioUrl(URL.createObjectURL(audioBlob));
+    } else if (data.audio_path) {
+      setAudioUrl(`${location.origin.replace(/:\\d+$/, ":8000")}${data.audio_path}`);
+    } else {
+      setAudioUrl("");
+    }
+    
+console.log("Gemini response:", data);
     return text as string;
   };
+
+  useEffect(() => {
+    const audio = document.getElementById("ai-audio") as HTMLAudioElement | null;
+    if (!audio) return;
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onEnded = () => setIsPlaying(false);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    audio.addEventListener("ended", onEnded);
+    return () => {
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("ended", onEnded);
+    };
+  }, [audioUrl]);
 
   const handleCallVet = () => {
     toast({
@@ -370,46 +406,105 @@ const Emergency = () => {
                 </div>
 
                 {/* Custom Emergency */}
-                <div className="mt-8 p-4 rounded-lg border border-border bg-muted/20">
-                  <h4 className="font-semibold mb-2">Or describe your situation</h4>
-                  <p className="text-sm text-muted-foreground mb-3">Enter a brief description of the emergency to get tailored first-aid guidance.</p>
-                  <Textarea
-                    placeholder="e.g., My dog ate chocolate about 20 minutes ago and is drooling."
-                    value={customEmergency}
-                    onChange={(e) => setCustomEmergency(e.target.value)}
-                    rows={3}
-                  />
-                  <div className="mt-3 flex items-center gap-2">
-                    <Button
-                      disabled={!customEmergency || aiLoading}
-                      onClick={async () => {
-                        try {
-                          setAiLoading(true);
-                          setAiAdvice("");
-                          const pet = pets.find(p => p.id === selectedPet);
-                          const species = pet?.species || "pet";
-                          const prompt = `You are a veterinary first-aid assistant. Provide concise, safe, step-by-step guidance for the following custom emergency for a ${species}. Avoid diagnoses; focus on first-aid and when to call a vet. Situation: ${customEmergency}`;
-                          const advice = await callGemini(prompt);
-                          setAiAdvice(advice);
-                        } catch (e) {
-                          setAiAdvice("Failed to get advice. Please try again.");
-                        } finally {
-                          setAiLoading(false);
-                        }
-                      }}
-                    >
-                      {aiLoading ? "Getting Advice..." : "Get Advice"}
-                    </Button>
-                    {aiLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                  </div>
+                {/* Custom Emergency */}
+<div className="mt-8 p-4 rounded-lg border border-border bg-muted/20">
+  <h4 className="font-semibold mb-2">Or describe your situation</h4>
+  <p className="text-sm text-muted-foreground mb-3">
+    Enter a brief description of the emergency to get tailored first-aid guidance.
+  </p>
 
-                  {aiAdvice && (
-                    <div className="mt-4 p-4 rounded-lg bg-card border border-border">
-                      <h5 className="font-semibold mb-2">AI First-Aid Guidance</h5>
-                      <div className="prose prose-sm max-w-none whitespace-pre-wrap">{aiAdvice}</div>
-                    </div>
-                  )}
-                </div>
+  <Textarea
+    placeholder="e.g., My dog ate chocolate about 20 minutes ago and is drooling."
+    value={customEmergency}
+    onChange={(e) => setCustomEmergency(e.target.value)}
+    rows={3}
+  />
+
+  <div className="mt-3 flex items-center gap-2">
+    <Button
+      disabled={!customEmergency || aiLoading}
+      onClick={async () => {
+        try {
+          setAiLoading(true);
+          setAiAdvice("");
+          setAudioUrl("");
+          const pet = pets.find((p) => p.id === selectedPet);
+          const species = pet?.species || "pet";
+
+          const prompt = `You are a veterinary first-aid assistant. Provide concise, safe, step-by-step guidance for the following custom emergency for a ${species}. Avoid diagnoses; focus on first-aid and when to call a vet. Situation: ${customEmergency}`;
+
+          const res = await fetch(`/api/ai/gemini`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt }),
+          });
+
+          if (!res.ok) throw new Error("Gemini request failed");
+          const data = await res.json();
+
+          // Store text + audio
+          setAiAdvice(data.text || "No advice generated.");
+         if (data.audio_base64) {
+  const audioBlob = new Blob(
+    [Uint8Array.from(atob(data.audio_base64), c => c.charCodeAt(0))],
+    { type: "audio/mp3" }
+  );
+  const url = URL.createObjectURL(audioBlob);
+  setAudioUrl(url);
+}
+
+        } catch (e) {
+          setAiAdvice("Failed to get advice. Please try again.");
+        } finally {
+          setAiLoading(false);
+        }
+      }}
+    >
+      {aiLoading ? "Getting Advice..." : "Get Advice"}
+    </Button>
+    {aiLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+  </div>
+
+  {aiAdvice && (
+    <div className="mt-4 p-4 rounded-lg bg-card border border-border">
+      <div className="flex items-center justify-between mb-2">
+        <h5 className="font-semibold">AI First-Aid Guidance</h5>
+
+        {audioUrl && (
+          <button
+            onClick={() => {
+              const audio = document.getElementById("ai-audio") as HTMLAudioElement;
+              if (!audio) return;
+              if (audio.paused) {
+                audio.play();
+              } else {
+                audio.pause();
+              }
+            }}
+            className="p-2 rounded-full bg-primary/10 hover:bg-primary/20 transition"
+            title={isPlaying ? "Pause" : "Play"}
+          >
+            {isPlaying ? (
+              <Pause className="h-5 w-5 text-primary" />
+            ) : (
+              <Volume2 className="h-5 w-5 text-primary" />
+            )}
+          </button>
+        )}
+      </div>
+
+      <div className="prose prose-sm max-w-none whitespace-pre-wrap">
+        {aiAdvice}
+      </div>
+
+      {audioUrl && (
+        <audio id="ai-audio" src={audioUrl} className="hidden" />
+      )}
+    </div>
+  )}
+</div>
+
+                  
               </CardContent>
             </Card>
           )}

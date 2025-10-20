@@ -9,3 +9,7 @@ httpx>=0.27.0
 google-generativeai>=0.7.2
 python-jose
 uvicorn[standard]
+pyttsx3
+psycopg2-binary>=2.9.9
+google-auth>=2.35.0
+python-dotenv>=1.0.0

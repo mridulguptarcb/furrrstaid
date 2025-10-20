@@ -1,5 +1,6 @@
 // API service layer for frontend-backend communication
-const API_BASE_URL = '/api';
+import { buildApiUrl } from "@/lib/config";
+const API_BASE_URL = buildApiUrl('/api');
 
 // Function to get the authentication token from local storage
 const getAuthToken = (): string | null => {
@@ -689,6 +690,20 @@ export const statsAPI = {
     const response = await fetch(`${API_BASE_URL}/stats/gemini-calls`);
     if (!response.ok) {
       throw new Error('Failed to fetch Gemini API call count');
+    }
+    return response.json();
+  },
+};
+
+export const aiAPI = {
+  generateDietPlan: async (prompt: string) => {
+    const response = await fetch(`${API_BASE_URL}/ai/gemini`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ prompt }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to generate AI response');
     }
     return response.json();
   },

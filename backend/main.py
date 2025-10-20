@@ -14,12 +14,27 @@ import uvicorn
 import httpx
 import google.generativeai as genai
 from fastapi.staticfiles import StaticFiles
+import pyttsx3
+import tempfile
+import base64
 import os
+from google.oauth2 import id_token
+from google.auth.transport import requests
+from dotenv import load_dotenv
+load_dotenv()
+
+
+
 
 
 # Database setup
-SQLALCHEMY_DATABASE_URL = "sqlite:///./furrstaid.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./furrstaid.db")
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    # e.g., postgres://... on Render/Cloud; SQLAlchemy prefers postgresql://
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -34,6 +49,26 @@ class User(Base):
     
     # Relationships
     pets = relationship("Pet", back_populates="user")
+
+app = FastAPI()
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+@app.get("/test-db")
+def test_db(db: Session = Depends(get_db)):
+    try:
+        # Simple query to check connection
+        result = db.execute("SELECT 1").scalar()
+        return {"status": "ok", "test_query_result": result}
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
 
 class Pet(Base):
     __tablename__ = "pets"
@@ -610,6 +645,27 @@ def get_current_user_optional(token: str = Depends(oauth2_scheme, use_cache=True
         return None
     return user
 
+@app.post("/google-signin")
+def google_signin(token: str, db: Session = Depends(get_db)):
+    try:
+        idinfo = id_token.verify_oauth2_token(token, requests.Request(), GOOGLE_CLIENT_ID)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid Google token")
+
+    email = idinfo['email']
+    name = idinfo.get('name')
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        user = User(name=name, email=email, hashed_password="")  # password can be empty for Google
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    access_token = create_access_token({"sub": user.email})
+    return {"access_token": access_token, "user_id": user.id}
+
+
 @app.get("/user/profile")
 def get_user_profile(current_user: User = Depends(get_current_user)):
     """Get the profile of the currently logged in user"""
@@ -1006,8 +1062,33 @@ async def ai_gemini(req: GeminiRequest, db: Session = Depends(get_db)):
             stat = Stats(key="gemini_calls", value=1)
             db.add(stat)
         db.commit()
-        
-        return {"text": text}
+
+        # Generate TTS audio using pyttsx3 into a temp file, return base64, then cleanup
+        audio_b64 = None
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                tmp_path = tmp.name
+            tts_engine = pyttsx3.init()
+            try:
+                rate = tts_engine.getProperty("rate")
+                tts_engine.setProperty("rate", max(125, int(rate * 0.9)))
+            except Exception:
+                pass
+            tts_engine.save_to_file(text, tmp_path)
+            tts_engine.runAndWait()
+            # Read and encode
+            with open(tmp_path, "rb") as f:
+                audio_b64 = base64.b64encode(f.read()).decode("utf-8")
+        except Exception:
+            audio_b64 = None
+        finally:
+            try:
+                if 'tmp_path' in locals() and os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+            except Exception:
+                pass
+
+        return {"text": text, "audio_base64": audio_b64}
     except HTTPException:
         raise
     except Exception as e:
@@ -1695,8 +1776,45 @@ async def get_user_name(current_user: User = Depends(get_current_user)):
     """Get only the name of the currently logged in user"""
     return {"name": current_user.name}
 
+# Google OAuth: verify ID token and issue our JWT
+class GoogleAuthRequest(BaseModel):
+    credential: str  # Google ID token from client
+
+@app.post("/auth/google")
+def auth_google(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
+    try:
+        client_id = os.getenv("GOOGLE_CLIENT_ID")
+        print(f"GOOGLE_CLIENT_ID: {client_id}")  # Debug log
+        if not client_id:
+            raise HTTPException(status_code=500, detail="GOOGLE_CLIENT_ID not configured")
+
+        print(f"Verifying token for client_id: {client_id}")  # Debug log
+        idinfo = id_token.verify_oauth2_token(payload.credential, requests.Request(), client_id)
+        print(f"Token verified successfully for: {idinfo.get('email')}")  # Debug log
+        email = idinfo.get("email")
+        name = idinfo.get("name") or email.split("@")[0]
+        if not email:
+            raise HTTPException(status_code=400, detail="Invalid Google token")
+
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            # Create a user record with a random password (unused)
+            user = User(name=name, email=email, phone=None, hashed_password=get_password_hash(os.urandom(16).hex()))
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        token = create_access_token({"sub": user.email})
+        return {"access_token": token, "token_type": "bearer"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Google auth error: {str(e)}")  # Debug log
+        raise HTTPException(status_code=400, detail=f"Google authentication failed: {str(e)}")
+
 from fastapi.responses import FileResponse
 
+# Static mounts
 app.mount("/assets", StaticFiles(directory=os.path.join("static", "assets")), name="assets")
 
 # Serve index.html at root
