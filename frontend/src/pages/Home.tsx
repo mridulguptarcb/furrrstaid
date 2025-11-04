@@ -66,7 +66,7 @@ const Home = () => {
                 <span className="block text-primary mt-2">First-aid when every second matters</span>
               </h1>
               <p className="text-xl text-muted-foreground max-w-xl">
-                Calm guidance, expert advice, and instant access to emergency care — all in your pocket. Because your pet deserves the best, always.
+                Calm guidance, expert advice, and instant access to emergency care, all in your pocket. Because your pet deserves the best, always.
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
                 <Link to="/auth">
@@ -174,7 +174,7 @@ const Home = () => {
             <div className="space-y-6">
               <h2 className="text-4xl font-bold">Expert Veterinary Network</h2>
               <p className="text-lg text-muted-foreground">
-                Find trusted, verified vets near you — with real-time availability, ratings, and one-tap calling for emergencies.
+                Find trusted, verified vets near you with real-time availability, ratings, and one-tap calling for emergencies.
               </p>
               <ul className="space-y-3">
                 {[
@@ -218,7 +218,7 @@ const Home = () => {
             <div className="order-1 lg:order-2 space-y-6">
               <h2 className="text-4xl font-bold">Complete Health Tracking</h2>
               <p className="text-lg text-muted-foreground">
-                Never miss a vaccination, keep medical records organized, and track your pet's health journey — all in one place.
+                Never miss a vaccination, keep medical records organized, and track your pet's health journey all in one place.
               </p>
               <ul className="space-y-3">
                 {[

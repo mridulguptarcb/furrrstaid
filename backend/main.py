@@ -1712,7 +1712,7 @@ async def create_vet(vet: VetCreate, db: Session = Depends(get_db)):
 async def search_nearby_vets(
     latitude: float,
     longitude: float,
-    radius_km: float = 10.0,
+    radius_km: float = 100.0,
     limit: int = 5,
     db: Session = Depends(get_db)
 ):

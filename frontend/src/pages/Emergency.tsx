@@ -295,7 +295,7 @@ console.log("Gemini response:", data);
             </div>
             <h1 className="text-4xl font-bold mb-4">Emergency Help</h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Quick access to first-aid guidance. Stay calm — we'll walk you through it step by step.
+              Quick access to first-aid guidance. Stay calm we'll walk you through it step by step.
             </p>
           </div>
 
