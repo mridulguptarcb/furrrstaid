@@ -12,6 +12,8 @@ from typing import List, Optional
 from datetime import datetime, date
 import uvicorn
 import httpx
+
+
 import google.generativeai as genai
 from fastapi.staticfiles import StaticFiles
 import pyttsx3
