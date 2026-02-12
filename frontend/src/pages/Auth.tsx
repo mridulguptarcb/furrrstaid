@@ -13,7 +13,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const googleClientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID as string | undefined;
+  const googleClientId = ((import.meta as unknown as { env: { VITE_GOOGLE_CLIENT_ID?: string } }).env).VITE_GOOGLE_CLIENT_ID;
   const [googleReady, setGoogleReady] = useState(false);
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -105,12 +105,11 @@ const Auth = () => {
     script.async = true;
     script.defer = true;
     script.onload = () => {
-      // @ts-ignore
-      if (window.google?.accounts?.id) {
-        // @ts-ignore
-        window.google.accounts.id.initialize({
+      const google = (window as unknown as { google?: { accounts?: { id?: { initialize: (opts: { client_id: string; callback: (resp: { credential: string }) => void }) => void; renderButton: (el: HTMLElement | null, opts: { theme: string; size: string; width: number }) => void } } } }).google;
+      if (google?.accounts?.id) {
+        google.accounts.id.initialize({
           client_id: googleClientId,
-          callback: async (resp: any) => {
+          callback: async (resp: { credential: string }) => {
             try {
               const res = await fetch(buildApiUrl("/auth/google"), {
                 method: "POST",
@@ -127,8 +126,7 @@ const Auth = () => {
             }
           },
         });
-        // @ts-ignore
-        window.google.accounts.id.renderButton(
+        google.accounts.id.renderButton(
           document.getElementById("google-btn"),
           { theme: "outline", size: "large", width: 320 }
         );

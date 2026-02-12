@@ -111,7 +111,7 @@ const Diet = () => {
             weeklyPlan[dayIndex].dinner = mealContent;
           }
         } else if (line.includes('portion') || line.includes('gram') || line.includes('cup')) {
-          let dayIndex = weeklyPlan.findIndex(day => day.day.toLowerCase() === currentDay.toLowerCase());
+          const dayIndex = weeklyPlan.findIndex(day => day.day.toLowerCase() === currentDay.toLowerCase());
           if (dayIndex !== -1) {
             weeklyPlan[dayIndex].portions = line;
           }
@@ -143,6 +143,50 @@ const Diet = () => {
     };
   };
 
+  const formatAdviceItems = (text: string): string[] => {
+    const withoutTags = text.replace(/<[^>]*>/g, "");
+    return withoutTags
+      .split(/\r?\n/)
+      .map(l => l.trim())
+      .map(l => l.replace(/^[-*\u2022]+\s*/, "")) // remove leading *, -, •
+      .map(l => l.replace(/^\d+[.)]\s*/, "")) // remove numeric bullets
+      .filter(l => l.length > 0)
+      .slice(0, 12);
+  };
+
+  const parseAdvice = (text: string): { mustDo: string[]; dontDo: string[]; vet: string[] } => {
+    const items = formatAdviceItems(text);
+    const mustDo: string[] = [];
+    const dontDo: string[] = [];
+    const vet: string[] = [];
+    items.forEach(item => {
+      const lower = item.toLowerCase();
+      const cleaned = item.replace(/^(do:|don't:|dont:|vet:)\s*/i, "").trim();
+      if (
+        lower.startsWith("don't") ||
+        lower.startsWith("do not") ||
+        lower.startsWith("dont") ||
+        lower.includes("don't ") ||
+        lower.includes("do not ")
+      ) {
+        dontDo.push(cleaned);
+      } else if (
+        lower.startsWith("vet:") ||
+        lower.includes("call your vet") ||
+        lower.includes("seek veterinary") ||
+        lower.includes("emergency vet") ||
+        lower.includes("poison control") ||
+        lower.includes("drive to the clinic") ||
+        lower.includes("go to the clinic")
+      ) {
+        vet.push(cleaned);
+      } else {
+        mustDo.push(cleaned);
+      }
+    });
+    return { mustDo, dontDo, vet };
+  };
+
   const handleGenerate = async () => {
     if (!selectedPet) {
       toast({ title: "Select a pet", description: "Choose a pet to generate a plan." });
@@ -155,14 +199,24 @@ const Diet = () => {
 Breed: ${selectedPet.breed}. Age: ${selectedPet.age_years} years. Weight: ${selectedPet.weight_kg} kg.
 Allergies/sensitivities: ${allergies || "None mentioned"}.
 Owner goals: ${goals}.
-Return:
-- A weekly table with breakfast/lunch/dinner and portion sizes in grams or cups
+Begin with one plain sentence of reassurance (no label).
+Then write 5–10 lines labeled "Do:" for immediate diet actions and care.
+Optionally add lines labeled "Don't:" (things to avoid) and "Vet:" (when to consult a vet).
+No HTML, no markdown, no asterisks.
+After that, provide a weekly timetable using lines like:
+Monday
+Breakfast: ...
+Lunch: ...
+Dinner: ...
+Portion: ...
+Repeat for all days.
+Also include:
 - Daily calorie estimate
 - Hydration tips
 - Treat recommendations and limits
 - Foods to avoid for this pet
 - Notes for senior/special conditions if relevant
-Keep it concise and actionable. Use simple bullet points and short hints.`;
+Keep it concise and actionable.`;
 
       const res = await aiAPI.generateDietPlan(prompt);
       const text: string = res.text || "No advice generated.";
@@ -215,6 +269,71 @@ Keep it concise and actionable. Use simple bullet points and short hints.`;
 
           {parsedDietData && (
             <div className="space-y-6">
+              {/* Care Guidance */}
+              {dietPlan && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Care Guidance</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const { mustDo, dontDo, vet } = parseAdvice(dietPlan);
+                      return (
+                        <div className="space-y-6">
+                          <p className="text-base leading-7">
+                            For {selectedPet?.name || "your pet"}, here’s calm diet guidance to follow now.
+                          </p>
+                          {mustDo.length > 0 && (
+                            <div>
+                              <h6 className="text-lg font-semibold mb-3">Must Do Right Now</h6>
+                              <ul className="space-y-2">
+                                {mustDo.slice(0, 10).map((item, idx) => (
+                                  <li key={`do-${idx}`} className="flex items-start gap-3">
+                                    <span className="mt-2 w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                                    <span className="text-base leading-7">{item}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {dontDo.length > 0 && (
+                            <div>
+                              <h6 className="text-lg font-semibold mb-3">Don’t Do</h6>
+                              <ul className="space-y-2">
+                                {dontDo.map((item, idx) => (
+                                  <li key={`dont-${idx}`} className="flex items-start gap-3">
+                                    <span className="mt-2 w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                                    <span className="text-base leading-7">{item}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {vet.length > 0 && (
+                            <div className="rounded-lg border border-border bg-yellow-50 dark:bg-yellow-900/20 p-4">
+                              <div className="flex items-start gap-3 mb-2">
+                                <Badge variant="outline" className="mr-2">Vet</Badge>
+                                <h6 className="text-lg font-semibold">When to See a Vet</h6>
+                              </div>
+                              <ul className="space-y-2">
+                                {vet.map((item, idx) => (
+                                  <li key={`vet-${idx}`} className="flex items-start gap-3">
+                                    <span className="mt-2 w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0" />
+                                    <span className="text-base leading-7">{item}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          <p className="text-sm text-muted-foreground">
+                            AI doesn’t suggest medications as it can hallucinate.
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              )}
               {/* Weekly Plan Table */}
               {parsedDietData.weeklyPlan.length > 0 && (
                 <Card>

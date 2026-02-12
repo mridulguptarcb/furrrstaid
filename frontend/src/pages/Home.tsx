@@ -12,12 +12,6 @@ import { buildApiUrl } from "@/lib/config";
 import FeedbackForm from "@/components/FeedbackForm";
 
 const Home = () => {
-  // === LOGIN CHECK ===
-  const token = localStorage.getItem("token");
-  if (!token) {
-    window.location.href = "/auth"; // force login page
-  }
-  
   const [userCount, setUserCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [geminiCallCount, setGeminiCallCount] = useState(0);

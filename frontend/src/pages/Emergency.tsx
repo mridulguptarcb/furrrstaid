@@ -40,6 +40,51 @@ const Emergency = () => {
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
+  const formatAdviceItems = (text: string): string[] => {
+    const withoutTags = text.replace(/<[^>]*>/g, "");
+    const rawLines = withoutTags
+      .split(/\r?\n/)
+      .flatMap(line => line.split(/(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.)\s+/)); // split by sentence ends if needed
+    return rawLines
+      .map(l => l.trim())
+      .map(l => l.replace(/^[-*\u2022]+\s*/, "")) // remove leading *, -, •
+      .map(l => l.replace(/^\d+[.)]\s*/, "")) // remove numeric bullets
+      .filter(l => l.length > 0)
+      .slice(0, 12);
+  };
+
+  const parseAdvice = (text: string) => {
+    const items = formatAdviceItems(text);
+    const mustDo: string[] = [];
+    const dontDo: string[] = [];
+    const vet: string[] = [];
+    items.forEach(item => {
+      const lower = item.toLowerCase();
+      const cleaned = item.replace(/^(do:|don't:|dont:|vet:)\s*/i, "").trim();
+      if (
+        lower.startsWith("don't") ||
+        lower.startsWith("do not") ||
+        lower.startsWith("dont") ||
+        lower.includes("don't ") ||
+        lower.includes("do not ")
+      ) {
+        dontDo.push(cleaned);
+      } else if (
+        lower.startsWith("vet:") ||
+        lower.includes("call your vet") ||
+        lower.includes("seek veterinary") ||
+        lower.includes("emergency vet") ||
+        lower.includes("poison control") ||
+        lower.includes("drive to the clinic") ||
+        lower.includes("go to the clinic")
+      ) {
+        vet.push(cleaned);
+      } else {
+        mustDo.push(cleaned);
+      }
+    });
+    return { mustDo, dontDo, vet };
+  };
 
   useEffect(() => {
     const fetchPets = async () => {
@@ -73,7 +118,7 @@ const Emergency = () => {
   ];
 
   const getGuidance = (symptom: string) => {
-    const guidance: Record<string, any> = {
+    const guidance: Record<string, { triage: string; steps: string[]; donts: string[]; urgency: string }> = {
       bleeding: {
         triage: "red",
         steps: [
@@ -431,7 +476,13 @@ console.log("Gemini response:", data);
           const pet = pets.find((p) => p.id === selectedPet);
           const species = pet?.species || "pet";
 
-          const prompt = `You are a veterinary first-aid assistant. Provide concise, safe, step-by-step guidance for the following custom emergency for a ${species}. Avoid diagnoses; focus on first-aid and when to call a vet. Situation: ${customEmergency}`;
+          const prompt = `You are a calm, supportive veterinary first-aid assistant helping a beloved ${species}.
+Begin with one plain sentence of reassurance (no label).
+Then write 5–10 lines labeled "Do:" for immediate actions.
+Optionally add lines labeled "Don't:" and "Vet:" as needed.
+No HTML, no markdown, no asterisks. Each line must be one clear instruction.
+Use warm, reassuring tone; focus on first-aid actions and when to call a vet.
+Situation: ${customEmergency}`;
 
           const res = await fetch(`/api/ai/gemini`, {
             method: "POST",
@@ -494,7 +545,62 @@ console.log("Gemini response:", data);
       </div>
 
       <div className="prose prose-sm max-w-none whitespace-pre-wrap">
-        {aiAdvice}
+        {(() => {
+          const { mustDo, dontDo, vet } = parseAdvice(aiAdvice);
+          const petInfo = pets.find((p) => p.id === selectedPet);
+          return (
+            <div className="space-y-6">
+              <p className="text-base leading-7">
+                For {petInfo?.name || "your pet"}, here’s calm first‑aid guidance to follow now.
+              </p>
+              {mustDo.length > 0 && (
+                <div>
+                  <h6 className="text-lg font-semibold mb-3">Must Do Right Now</h6>
+                  <ul className="space-y-2">
+                    {mustDo.slice(0, 10).map((item, idx) => (
+                      <li key={`do-${idx}`} className="flex items-start gap-3">
+                        <span className="mt-2 w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                        <span className="text-base leading-7">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {dontDo.length > 0 && (
+                <div>
+                  <h6 className="text-lg font-semibold mb-3">Don’t Do</h6>
+                  <ul className="space-y-2">
+                    {dontDo.map((item, idx) => (
+                      <li key={`dont-${idx}`} className="flex items-start gap-3">
+                        <span className="mt-2 w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                        <span className="text-base leading-7">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {vet.length > 0 && (
+                <div className="rounded-lg border border-border bg-yellow-50 dark:bg-yellow-900/20 p-4">
+                  <div className="flex items-start gap-3 mb-2">
+                    <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                    <h6 className="text-lg font-semibold">When to See a Vet</h6>
+                  </div>
+                  <ul className="space-y-2">
+                    {vet.map((item, idx) => (
+                      <li key={`vet-${idx}`} className="flex items-start gap-3">
+                        <span className="mt-2 w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0" />
+                        <span className="text-base leading-7">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="text-sm text-muted-foreground">
+                AI doesn’t suggest medications as it can hallucinate.
+              </p>
+            </div>
+          );
+        })()}
       </div>
 
       {audioUrl && (

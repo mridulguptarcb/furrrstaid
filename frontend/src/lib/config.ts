@@ -1,10 +1,7 @@
 export function getApiBaseUrl(): string {
-  // Prefer explicit env when provided (e.g., Render separate origins)
-  const fromEnv = (import.meta as any).env?.VITE_API_BASE_URL as string | undefined;
-  const cleaned = (fromEnv || "").trim().replace(/\/$/, "");
+  const env = (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env;
+  const cleaned = (env?.VITE_API_BASE_URL || "").trim().replace(/\/$/, "");
   if (cleaned) return cleaned;
-
-  // Default: same-origin backend (works with Vite proxy in dev and unified origin in prod)
   return "";
 }
 

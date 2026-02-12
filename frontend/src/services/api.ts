@@ -291,7 +291,7 @@ export const breedAPI = {
 export const checkupReminderAPI = {
   // Get all checkup reminders
   async getCheckupReminders(petId?: number): Promise<CheckupReminder[]> {
-    let url = petId 
+    const url = petId 
       ? `${API_BASE_URL}/checkup-reminders?pet_id=${petId}`
       : `${API_BASE_URL}/checkup-reminders`;
     
