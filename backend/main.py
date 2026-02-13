@@ -1050,11 +1050,57 @@ class GeminiRequest(BaseModel):
 @app.post("/api/ai/gemini")
 async def ai_gemini(req: GeminiRequest, db: Session = Depends(get_db)):
     try:
-        GEMINI_API_KEY = "AIzaSyBszmP8SEavmAx8tLlsPxvuXK928R_-Ulk"
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("gemini-2.5-flash-lite")
-        response = model.generate_content(req.prompt)
-        text = getattr(response, "text", None) or "No advice generated."
+        def fallback_text(prompt: str) -> str:
+            p = (prompt or "").lower()
+            if ("diet" in p) or ("meal" in p) or ("calorie" in p):
+                return (
+                    "For your pet, here’s calm diet guidance to follow now.\n"
+                    "Do: Offer small, frequent meals matched to weight.\n"
+                    "Do: Keep fresh water available at all times.\n"
+                    "Do: Introduce new foods slowly over 3–5 days.\n"
+                    "Do: Monitor stools and energy; adjust portions.\n"
+                    "Do: Use measured portions; avoid free-feeding.\n"
+                    "Don't: Feed spicy, salty, or sugary foods.\n"
+                    "Don't: Give cooked bones or high-fat scraps.\n"
+                    "Vet: Contact a vet if vomiting, diarrhea, or lethargy persists.\n"
+                    "Monday\nBreakfast: Lean protein with rice\nLunch: Kibble + wet topper\nDinner: Protein + vegetables\nPortion: 2–3% body weight daily\n"
+                    "Tuesday\nBreakfast: Kibble + pumpkin\nLunch: Wet food\nDinner: Protein + sweet potato\nPortion: 2–3% body weight daily\n"
+                    "Wednesday\nBreakfast: Protein + rice\nLunch: Kibble\nDinner: Protein + vegetables\nPortion: 2–3% body weight daily\n"
+                    "Thursday\nBreakfast: Kibble + wet topper\nLunch: Wet food\nDinner: Protein + vegetables\nPortion: 2–3% body weight daily\n"
+                    "Friday\nBreakfast: Protein + rice\nLunch: Kibble\nDinner: Protein + vegetables\nPortion: 2–3% body weight daily\n"
+                    "Saturday\nBreakfast: Kibble + pumpkin\nLunch: Wet food\nDinner: Protein + vegetables\nPortion: 2–3% body weight daily\n"
+                    "Sunday\nBreakfast: Protein + rice\nLunch: Kibble\nDinner: Protein + vegetables\nPortion: 2–3% body weight daily\n"
+                    "Daily calories: Match weight and activity; avoid rapid changes.\n"
+                    "Hydration: Fresh water; consider broth if intake is low.\n"
+                    "Treats: Limit to <10% of daily calories.\n"
+                    "Avoid: Chocolate, xylitol, grapes/raisins, onions, alcohol.\n"
+                    "Notes: Adjust portions for age or medical needs."
+                )
+            return (
+                "You’re doing the right thing by staying calm.\n"
+                "Do: Keep your pet still and comfortable.\n"
+                "Do: Check breathing and responsiveness.\n"
+                "Do: Apply gentle pressure to bleeding wounds.\n"
+                "Do: Remove visible hazards nearby.\n"
+                "Do: Use a clean cloth for any wound care.\n"
+                "Don't: Give medications without vet advice.\n"
+                "Don't: Delay calling a vet for severe signs.\n"
+                "Vet: Call your vet or emergency clinic for persistent distress.\n"
+                "Monday\nBreakfast: —\nLunch: —\nDinner: —\nPortion: —"
+            )
+
+        GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+        text = None
+        if GEMINI_API_KEY:
+            try:
+                genai.configure(api_key=GEMINI_API_KEY)
+                model = genai.GenerativeModel("gemini-2.5-flash-lite")
+                response = model.generate_content(req.prompt)
+                text = getattr(response, "text", None)
+            except Exception:
+                text = None
+        if not text:
+            text = fallback_text(req.prompt)
         
         # Increment the counter in the database
         stat = db.query(Stats).filter(Stats.key == "gemini_calls").first()
@@ -1065,7 +1111,6 @@ async def ai_gemini(req: GeminiRequest, db: Session = Depends(get_db)):
             db.add(stat)
         db.commit()
 
-        # Generate TTS audio using pyttsx3 into a temp file, return base64, then cleanup
         audio_b64 = None
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:

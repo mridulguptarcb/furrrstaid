@@ -5,7 +5,7 @@ echo
 
 echo "Starting FastAPI Backend..."
 cd backend
-python main.py &
+uvicorn main:app --reload --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 
 echo "Waiting for backend to start..."

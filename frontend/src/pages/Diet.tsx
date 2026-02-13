@@ -162,27 +162,13 @@ const Diet = () => {
     items.forEach(item => {
       const lower = item.toLowerCase();
       const cleaned = item.replace(/^(do:|don't:|dont:|vet:)\s*/i, "").trim();
-      if (
-        lower.startsWith("don't") ||
-        lower.startsWith("do not") ||
-        lower.startsWith("dont") ||
-        lower.includes("don't ") ||
-        lower.includes("do not ")
-      ) {
-        dontDo.push(cleaned);
-      } else if (
-        lower.startsWith("vet:") ||
-        lower.includes("call your vet") ||
-        lower.includes("seek veterinary") ||
-        lower.includes("emergency vet") ||
-        lower.includes("poison control") ||
-        lower.includes("drive to the clinic") ||
-        lower.includes("go to the clinic")
-      ) {
-        vet.push(cleaned);
-      } else {
+      if (lower.startsWith("do:")) {
         mustDo.push(cleaned);
-      }
+      } else if (lower.startsWith("don't:") || lower.startsWith("dont:")) {
+        dontDo.push(cleaned);
+      } else if (lower.startsWith("vet:")) {
+        vet.push(cleaned);
+      } // ignore any other lines (e.g., timetable text)
     });
     return { mustDo, dontDo, vet };
   };
@@ -269,7 +255,107 @@ Keep it concise and actionable.`;
 
           {parsedDietData && (
             <div className="space-y-6">
-              {/* Care Guidance */}
+              
+              {/* Weekly Plan Table */}
+              {parsedDietData.weeklyPlan.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>7-Day Meal Plan</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Day</TableHead>
+                            <TableHead>Breakfast</TableHead>
+                            <TableHead>Lunch</TableHead>
+                            <TableHead>Dinner</TableHead>
+                            <TableHead>Portions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {parsedDietData.weeklyPlan.map((day, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">{day.day}</TableCell>
+                              <TableCell>{day.breakfast || "-"}</TableCell>
+                              <TableCell>{day.lunch || "-"}</TableCell>
+                              <TableCell>{day.dinner || "-"}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{day.portions || "-"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {parsedDietData.dailyCalories && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Daily Calories</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm">{parsedDietData.dailyCalories}</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {parsedDietData.hydrationTips.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Hydration Tips</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-1 text-sm">
+                      {parsedDietData.hydrationTips.map((tip, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-primary">•</span>
+                          <span>{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+
+              {parsedDietData.foodsToAvoid.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg text-destructive">Foods to Avoid</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-1 text-sm">
+                      {parsedDietData.foodsToAvoid.map((food, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-destructive">•</span>
+                          <span>{food}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+
+              {parsedDietData.specialNotes.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Important Points</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-1 text-sm">
+                      {parsedDietData.specialNotes.map((note, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-primary">•</span>
+                          <span>{note}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+
               {dietPlan && (
                 <Card>
                   <CardHeader>
@@ -331,126 +417,6 @@ Keep it concise and actionable.`;
                         </div>
                       );
                     })()}
-                  </CardContent>
-                </Card>
-              )}
-              {/* Weekly Plan Table */}
-              {parsedDietData.weeklyPlan.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>7-Day Meal Plan</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Day</TableHead>
-                            <TableHead>Breakfast</TableHead>
-                            <TableHead>Lunch</TableHead>
-                            <TableHead>Dinner</TableHead>
-                            <TableHead>Portions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {parsedDietData.weeklyPlan.map((day, index) => (
-                            <TableRow key={index}>
-                              <TableCell className="font-medium">{day.day}</TableCell>
-                              <TableCell>{day.breakfast || "-"}</TableCell>
-                              <TableCell>{day.lunch || "-"}</TableCell>
-                              <TableCell>{day.dinner || "-"}</TableCell>
-                              <TableCell className="text-sm text-muted-foreground">{day.portions || "-"}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Additional Information Cards */}
-              <div className="grid md:grid-cols-2 gap-4">
-                {parsedDietData.dailyCalories && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Daily Calories</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">{parsedDietData.dailyCalories}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {parsedDietData.hydrationTips.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Hydration Tips</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-1 text-sm">
-                        {parsedDietData.hydrationTips.map((tip, index) => (
-                          <li key={index} className="flex items-start gap-2">
-                            <span className="text-primary">•</span>
-                            <span>{tip}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {parsedDietData.treatRecommendations.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Treat Recommendations</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-1 text-sm">
-                        {parsedDietData.treatRecommendations.map((treat, index) => (
-                          <li key={index} className="flex items-start gap-2">
-                            <span className="text-primary">•</span>
-                            <span>{treat}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {parsedDietData.foodsToAvoid.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg text-destructive">Foods to Avoid</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-1 text-sm">
-                        {parsedDietData.foodsToAvoid.map((food, index) => (
-                          <li key={index} className="flex items-start gap-2">
-                            <span className="text-destructive">•</span>
-                            <span>{food}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              {parsedDietData.specialNotes.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Special Notes</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-1 text-sm">
-                      {parsedDietData.specialNotes.map((note, index) => (
-                        <li key={index} className="flex items-start gap-2">
-                          <span className="text-primary">•</span>
-                          <span>{note}</span>
-                        </li>
-                      ))}
-                    </ul>
                   </CardContent>
                 </Card>
               )}

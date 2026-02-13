@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
-import { petAPI, Pet } from "@/services/api";
+import { petAPI, Pet, aiAPI } from "@/services/api";
 
 const Emergency = () => {
   const [selectedPet, setSelectedPet] = useState<number | null>(null);
@@ -61,27 +61,13 @@ const Emergency = () => {
     items.forEach(item => {
       const lower = item.toLowerCase();
       const cleaned = item.replace(/^(do:|don't:|dont:|vet:)\s*/i, "").trim();
-      if (
-        lower.startsWith("don't") ||
-        lower.startsWith("do not") ||
-        lower.startsWith("dont") ||
-        lower.includes("don't ") ||
-        lower.includes("do not ")
-      ) {
-        dontDo.push(cleaned);
-      } else if (
-        lower.startsWith("vet:") ||
-        lower.includes("call your vet") ||
-        lower.includes("seek veterinary") ||
-        lower.includes("emergency vet") ||
-        lower.includes("poison control") ||
-        lower.includes("drive to the clinic") ||
-        lower.includes("go to the clinic")
-      ) {
-        vet.push(cleaned);
-      } else {
+      if (lower.startsWith("do:")) {
         mustDo.push(cleaned);
-      }
+      } else if (lower.startsWith("don't:") || lower.startsWith("dont:")) {
+        dontDo.push(cleaned);
+      } else if (lower.startsWith("vet:")) {
+        vet.push(cleaned);
+      } // ignore any other lines (e.g., timetable text)
     });
     return { mustDo, dontDo, vet };
   };
@@ -175,16 +161,8 @@ const Emergency = () => {
   };
 
   const callGemini = async (prompt: string) => {
-    const res = await fetch(`/api/ai/gemini`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
-    });
-    
-    if (!res.ok) throw new Error("Gemini request failed");
-    const data = await res.json();
+    const data = await aiAPI.generateDietPlan(prompt);
     const text = data?.text || "No advice generated.";
-    // Audio
     if (data.audio_base64) {
       const audioBlob = new Blob(
         [Uint8Array.from(atob(data.audio_base64), c => c.charCodeAt(0))],
@@ -196,8 +174,6 @@ const Emergency = () => {
     } else {
       setAudioUrl("");
     }
-    
-console.log("Gemini response:", data);
     return text as string;
   };
 
@@ -484,14 +460,7 @@ No HTML, no markdown, no asterisks. Each line must be one clear instruction.
 Use warm, reassuring tone; focus on first-aid actions and when to call a vet.
 Situation: ${customEmergency}`;
 
-          const res = await fetch(`/api/ai/gemini`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt }),
-          });
-
-          if (!res.ok) throw new Error("Gemini request failed");
-          const data = await res.json();
+          const data = await aiAPI.generateDietPlan(prompt);
 
           // Store text + audio
           setAiAdvice(data.text || "No advice generated.");
